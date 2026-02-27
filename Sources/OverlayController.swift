@@ -155,15 +155,28 @@ class OverlayController: ObservableObject {
     private func transcribeAndInsert(fileUrl: URL) {
         // Determine transcriber
         let transcriber: TranscriptionService
-        if SettingsManager.shared.providerSelection == "remote" {
-            if let apiKey = SettingsManager.shared.getAPIKey(), !apiKey.isEmpty {
-                transcriber = RemoteTranscriptionService(apiKey: apiKey)
-            } else {
-                print("Remote provider selected but no API key found. Falling back to Mock.")
+        let settings = SettingsManager.shared
+        let provider = settings.providerSelection
+        let apiKey = settings.getAPIKey() ?? ""
+        
+        if provider == "mock" {
+            transcriber = MockTranscriptionService()
+        } else if apiKey.isEmpty {
+            print("[\(provider.capitalized)] Selected but no API key found. Falling back to Mock.")
+            transcriber = MockTranscriptionService()
+        } else {
+            switch provider {
+            case "openai":
+                transcriber = OpenAITranscriptionService(apiKey: apiKey, model: settings.selectedModel)
+            case "gemini":
+                transcriber = GeminiTranscriptionService(apiKey: apiKey, model: settings.selectedModel)
+            case "openrouter":
+                transcriber = RemoteTranscriptionService(apiKey: apiKey, model: settings.selectedModel, baseURL: "https://openrouter.ai/api/v1")
+            case "custom":
+                transcriber = RemoteTranscriptionService(apiKey: apiKey, model: settings.customProviderModel, baseURL: settings.customProviderBaseURL)
+            default:
                 transcriber = MockTranscriptionService()
             }
-        } else {
-            transcriber = MockTranscriptionService()
         }
         
         // Kick off async transcription

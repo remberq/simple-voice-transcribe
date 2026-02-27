@@ -97,63 +97,236 @@ struct SettingsView: View {
     private var transcriptionTab: some View {
         settingsPage {
             VStack(alignment: .leading, spacing: 16) {
-                Text("Провайдер транскрибации")
+                Text("Настройки провайдера")
                     .font(.headline)
                 
                 Picker("Провайдер", selection: $settings.providerSelection) {
+                    Text("OpenAI").tag("openai")
+                    Text("Google Gemini").tag("gemini")
+                    Text("OpenRouter").tag("openrouter")
+                    Text("Свой (Custom OpenAI)").tag("custom")
                     Text("Mock (Тестовый)").tag("mock")
-                    Text("OpenRouter").tag("remote")
                 }
-                .pickerStyle(.radioGroup)
+                .pickerStyle(.menu)
+                .onChange(of: settings.providerSelection) { newValue in
+                    // Reset model to default for the provider when switching
+                    switch newValue {
+                    case "openai": settings.selectedModel = "whisper-1"
+                    case "gemini": settings.selectedModel = "gemini-1.5-flash"
+                    case "openrouter": settings.selectedModel = "openai/gpt-4o-audio-preview"
+                    default: break
+                    }
+                }
                 
-                if settings.providerSelection == "remote" {
+                if settings.providerSelection != "mock" {
                     Divider()
                         .padding(.vertical, 8)
-                    Text("Настройки OpenRouter")
-                        .font(.headline)
-
-                    Toggle("Хранить API-ключ в Связке ключей (Keychain)", isOn: $settings.storeAPIKeyInKeychain)
-                    
-                    HStack {
-                        SecureField("Вставьте API-ключ OpenRouter", text: $apiKeyInput)
-                            .textFieldStyle(.roundedBorder)
-                            .onSubmit {
-                                settings.setAPIKey(apiKeyInput)
-                            }
                         
-                        Button("Сохранить") {
-                            settings.setAPIKey(apiKeyInput)
-                        }
+                    providerConfigSection
+                    
+                    Divider()
+                        .padding(.vertical, 8)
+                        
+                    apiKeySection
+                }
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private var providerConfigSection: some View {
+        switch settings.providerSelection {
+        case "custom":
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Настройки Custom сервера")
+                    .font(.headline)
+                
+                HStack {
+                    Text("Имя:"); Spacer()
+                    TextField("Имя провайдера", text: $settings.customProviderName)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 250)
+                }
+                
+                HStack {
+                    Text("Base URL:"); Spacer()
+                    TextField("https://api.example.com/v1", text: $settings.customProviderBaseURL)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 250)
+                }
+                
+                HStack {
+                    Text("Модель STT:"); Spacer()
+                    TextField("whisper-1", text: $settings.customProviderModel)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 250)
+                }
+            }
+            
+        case "openai":
+            Picker("Модель", selection: $settings.selectedModel) {
+                Text("Whisper 1 (whisper-1)").tag("whisper-1")
+            }
+            .pickerStyle(.menu)
+            
+        case "gemini":
+            Picker("Модель", selection: $settings.selectedModel) {
+                Text("Gemini 1.5 Flash").tag("gemini-1.5-flash")
+                Text("Gemini 1.5 Pro").tag("gemini-1.5-pro")
+                Text("Gemini 2.0 Flash").tag("gemini-2.0-flash")
+            }
+            .pickerStyle(.menu)
+            
+        case "openrouter":
+            Picker("Модель", selection: $settings.selectedModel) {
+                Text("GPT-4o Audio Preview").tag("openai/gpt-4o-audio-preview")
+                Text("Whisper 3 (Large)").tag("openai/whisper-large-v3")
+            }
+            .pickerStyle(.menu)
+            
+        default:
+            EmptyView()
+        }
+    }
+    
+    private var apiKeySection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("API Ключ")
+                .font(.headline)
 
-                        Button("Удалить ключ") {
-                            settings.deleteAPIKey()
-                            apiKeyInput = ""
-                        }
+            Toggle("Хранить API-ключ в Связке ключей (Keychain)", isOn: $settings.storeAPIKeyInKeychain)
+            
+            HStack {
+                SecureField("Введите API-ключ", text: $apiKeyInput)
+                    .textFieldStyle(.roundedBorder)
+                    .onSubmit {
+                        settings.setAPIKey(apiKeyInput)
                     }
-                    
-                    if let storedKey = settings.getAPIKey(), !storedKey.isEmpty {
-                        Text("Ключ сохранен (\(storedKey.count) символов)")
-                            .font(.caption)
-                            .foregroundColor(.green)
-                    } else {
-                        Text("Ключ не сохранен")
-                            .font(.caption)
-                            .foregroundColor(.orange)
-                    }
-                    
-                    if settings.storeAPIKeyInKeychain {
-                        Text("Ключ хранится в системной Связке ключей macOS.")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    } else {
-                        Text("Режим только на сессию: ключ хранится в памяти и удаляется при выходе из приложения.")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    Text("Модель: openai/gpt-4o-audio-preview")
+                
+                Button("Сохранить") {
+                    settings.setAPIKey(apiKeyInput)
+                }
+
+                Button("Удалить") {
+                    settings.deleteAPIKey()
+                    apiKeyInput = ""
+                }
+            }
+            
+            HStack {
+                if let storedKey = settings.getAPIKey(), !storedKey.isEmpty {
+                    Text("Ключ сохранен (\(storedKey.count) символов)")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.green)
+                } else {
+                    Text("Ключ не сохранен")
+                        .font(.caption)
+                        .foregroundColor(.orange)
+                }
+                
+                Spacer()
+                
+                Button("Проверить подключение") {
+                    testConnection()
+                }
+                .disabled((settings.getAPIKey() ?? "").isEmpty)
+            }
+            
+            if !connectionTestResult.isEmpty {
+                Text(connectionTestResult)
+                    .font(.caption)
+                    .foregroundColor(connectionTestSuccess ? .green : .red)
+            }
+            
+            if settings.storeAPIKeyInKeychain {
+                Text("Ключ безопасно хранится в macOS Keychain.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            } else {
+                Text("Режим только на сессию: ключ удаляется при выходе.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
+    
+    @State private var connectionTestResult: String = ""
+    @State private var connectionTestSuccess: Bool = false
+    
+    private func testConnection() {
+        connectionTestResult = "Проверка..."
+        connectionTestSuccess = false
+        
+        let provider = settings.providerSelection
+        guard let apiKey = settings.getAPIKey(), !apiKey.isEmpty else {
+            connectionTestResult = "Ошибка: Нет ключа API"
+            return
+        }
+        
+        Task {
+            // Determine the URL based on the provider
+            var urlString = ""
+            switch provider {
+            case "openai":
+                urlString = "https://api.openai.com/v1/models"
+            case "openrouter":
+                urlString = "https://openrouter.ai/api/v1/models"
+            case "gemini":
+                urlString = "https://generativelanguage.googleapis.com/v1beta/models?key=\(apiKey)"
+            case "custom":
+                let base = settings.customProviderBaseURL
+                let cleanBase = base.hasSuffix("/chat/completions") ? base.replacingOccurrences(of: "/chat/completions", with: "") : base.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+                urlString = "\(cleanBase)/models"
+            default:
+                await MainActor.run {
+                    self.connectionTestResult = "Ошибка: Неподдерживаемый провайдер для проверки"
+                }
+                return
+            }
+            
+            guard let url = URL(string: urlString) else {
+                await MainActor.run { self.connectionTestResult = "Ошибка: Неверный URL сервера" }
+                return
+            }
+            
+            var request = URLRequest(url: url)
+            request.httpMethod = "GET"
+            
+            // OpenAI/OpenRouter/Custom require Bearer token
+            if provider != "gemini" {
+                request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+                if provider == "openrouter" {
+                    request.setValue("VoiceOverlay/1.0", forHTTPHeaderField: "HTTP-Referer")
+                    request.setValue("Voice Overlay macOS App", forHTTPHeaderField: "X-Title")
+                }
+            }
+            
+            request.timeoutInterval = 10 // Quick timeout for connection test
+            
+            do {
+                let (_, response) = try await URLSession.shared.data(for: request)
+                
+                await MainActor.run {
+                    if let httpResponse = response as? HTTPURLResponse {
+                        if httpResponse.statusCode == 200 {
+                            self.connectionTestSuccess = true
+                            self.connectionTestResult = "Успешное подключение к \(provider.capitalized)!"
+                        } else if httpResponse.statusCode == 401 || httpResponse.statusCode == 400 {
+                            self.connectionTestSuccess = false
+                            self.connectionTestResult = "Ошибка: Неверный API ключ"
+                        } else {
+                            self.connectionTestSuccess = false
+                            self.connectionTestResult = "Ошибка: Сервер вернул код \(httpResponse.statusCode)"
+                        }
+                    } else {
+                        self.connectionTestSuccess = false
+                        self.connectionTestResult = "Ошибка: Неизвестный ответ сервера"
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    self.connectionTestSuccess = false
+                    self.connectionTestResult = "Ошибка подключения: \(error.localizedDescription)"
                 }
             }
         }

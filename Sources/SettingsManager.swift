@@ -11,6 +11,10 @@ class SettingsManager: ObservableObject {
     private let kHotkeyKeyCode = "hotkeyKeyCode"
     private let kHotkeyModifiers = "hotkeyModifiers"
     private let kProviderSelection = "providerSelection"
+    private let kSelectedModel = "selectedModel"
+    private let kCustomProviderName = "customProviderName"
+    private let kCustomProviderBaseURL = "customProviderBaseURL"
+    private let kCustomProviderModel = "customProviderModel"
     private let kStoreAPIKeyInKeychain = "storeAPIKeyInKeychain"
     
     // Keychain Constants
@@ -34,7 +38,22 @@ class SettingsManager: ObservableObject {
     @Published var providerSelection: String {
         didSet { UserDefaults.standard.set(providerSelection, forKey: kProviderSelection) }
     }
-
+    
+    @Published var selectedModel: String {
+        didSet { UserDefaults.standard.set(selectedModel, forKey: kSelectedModel) }
+    }
+    
+    @Published var customProviderName: String {
+        didSet { UserDefaults.standard.set(customProviderName, forKey: kCustomProviderName) }
+    }
+    
+    @Published var customProviderBaseURL: String {
+        didSet { UserDefaults.standard.set(customProviderBaseURL, forKey: kCustomProviderBaseURL) }
+    }
+    
+    @Published var customProviderModel: String {
+        didSet { UserDefaults.standard.set(customProviderModel, forKey: kCustomProviderModel) }
+    }
     @Published var storeAPIKeyInKeychain: Bool {
         didSet { UserDefaults.standard.set(storeAPIKeyInKeychain, forKey: kStoreAPIKeyInKeychain) }
     }
@@ -49,13 +68,21 @@ class SettingsManager: ObservableObject {
         defaults.register(defaults: [
             kHotkeyKeyCode: 49,
             kHotkeyModifiers: 768,
-            kProviderSelection: "mock",
+            kProviderSelection: "openai",
+            kSelectedModel: "whisper-1",
+            kCustomProviderName: "My Provider",
+            kCustomProviderBaseURL: "https://api.example.com/v1",
+            kCustomProviderModel: "whisper-1",
             kStoreAPIKeyInKeychain: true
         ])
         
         self.hotkeyKeyCode = defaults.integer(forKey: kHotkeyKeyCode)
         self.hotkeyModifiers = defaults.integer(forKey: kHotkeyModifiers)
-        self.providerSelection = defaults.string(forKey: kProviderSelection) ?? "mock"
+        self.providerSelection = defaults.string(forKey: kProviderSelection) ?? "openai"
+        self.selectedModel = defaults.string(forKey: kSelectedModel) ?? "whisper-1"
+        self.customProviderName = defaults.string(forKey: kCustomProviderName) ?? "My Provider"
+        self.customProviderBaseURL = defaults.string(forKey: kCustomProviderBaseURL) ?? "https://api.example.com/v1"
+        self.customProviderModel = defaults.string(forKey: kCustomProviderModel) ?? "whisper-1"
         self.storeAPIKeyInKeychain = defaults.bool(forKey: kStoreAPIKeyInKeychain)
     }
     
