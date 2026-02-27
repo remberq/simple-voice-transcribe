@@ -6,26 +6,18 @@ class PermissionsCoordinator {
     
     // Status to hold whether everything is granted
     var isFullyAuthorized: Bool {
-        return isMicrophoneAuthorized && isAccessibilityAuthorized
+        return isMicrophoneAuthorized
     }
     
     var isMicrophoneAuthorized: Bool {
         return AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
     }
     
-    var isAccessibilityAuthorized: Bool {
-        return AXIsProcessTrusted()
-    }
-    
     private init() {}
     
     func requestAll(completion: @escaping (Bool) -> Void) {
-        // Step 1: Request Accessibility. This brings up the system prompt if missing.
-        let promptOption = kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String
-        let options = [promptOption: true] as CFDictionary
-        _ = AXIsProcessTrustedWithOptions(options)
-        
-        // Step 2: Request Microphone
+        // Request Microphone
+
         let audioStatus = AVCaptureDevice.authorizationStatus(for: .audio)
         if audioStatus == .notDetermined {
             AVCaptureDevice.requestAccess(for: .audio) { [weak self] _ in
@@ -40,16 +32,13 @@ class PermissionsCoordinator {
     
     enum PermissionType {
         case microphone
-        case accessibility
     }
     
-    func openSystemSettings(for type: PermissionType = .accessibility) {
+    func openSystemSettings(for type: PermissionType = .microphone) {
         let urlString: String
         switch type {
         case .microphone:
             urlString = "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"
-        case .accessibility:
-            urlString = "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
         }
         
         if let url = URL(string: urlString) {

@@ -10,6 +10,7 @@ RESOURCES_DIR = $(CONTENTS_DIR)/Resources
 SWIFTC = swiftc
 SWIFT_FILES = $(wildcard Sources/*.swift)
 SWIFT_FLAGS = -O -parse-as-library
+SIGN_APP ?= 1
 
 .PHONY: all clean run build test lint-docs
 
@@ -25,8 +26,13 @@ $(APP_DIR): $(SWIFT_FILES) Info.plist
 	@cp Info.plist $(CONTENTS_DIR)/Info.plist
 	@cp Resources/AppIcon.icns $(RESOURCES_DIR)/AppIcon.icns
 	@echo "APPL????" > $(CONTENTS_DIR)/PkgInfo
-	@xattr -cr $(APP_DIR)
-	@codesign --force --deep --sign - $(APP_DIR)
+	@find $(APP_DIR) -name ".DS_Store" -delete
+	@xattr -rc $(APP_DIR) || true
+	@if [ "$(SIGN_APP)" = "1" ]; then \
+		codesign --force --deep --sign - $(APP_DIR); \
+	else \
+		echo "=> Skipping codesign (SIGN_APP=$(SIGN_APP))"; \
+	fi
 	@echo "=> Build successful: $(APP_DIR)"
 
 run: build

@@ -11,6 +11,7 @@ Voice Overlay is a macOS menu-bar utility (`LSUIElement`) that records voice and
 5. App transcribes audio using selected provider:
    - `mock` (default)
    - `remote` (OpenRouter, requires API key in Keychain)
+   - remote key storage mode: Keychain (persistent) or session-only (memory)
 6. Result handling:
    - optional clipboard copy (`alwaysCopy` setting)
    - optional insertion via simulated `Cmd+V` when focused element appears editable and frontmost app is unchanged

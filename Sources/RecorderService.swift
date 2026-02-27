@@ -33,7 +33,7 @@ class RecorderService: NSObject, ObservableObject, AVAudioRecorderDelegate {
         }
     }
     
-    func startRecording() {
+    func startRecording(completion: ((Bool) -> Void)? = nil) {
         guard !isPreparing else { return }
         isPreparing = true
         pendingStop = false
@@ -44,6 +44,7 @@ class RecorderService: NSObject, ObservableObject, AVAudioRecorderDelegate {
             guard granted else {
                 print("Microphone permission denied.")
                 self.isPreparing = false
+                completion?(false)
                 return
             }
             
@@ -65,11 +66,22 @@ class RecorderService: NSObject, ObservableObject, AVAudioRecorderDelegate {
                 self.audioRecorder = try AVAudioRecorder(url: url, settings: settings)
                 self.audioRecorder?.delegate = self
                 self.audioRecorder?.isMeteringEnabled = true
-                self.audioRecorder?.record()
-                self.startMetering()
-                print("Recording started at: \(url)")
+                let didStart = self.audioRecorder?.record() ?? false
+                if didStart {
+                    self.startMetering()
+                    print("Recording started at: \(url)")
+                    completion?(true)
+                } else {
+                    print("AVAudioRecorder failed to start recording.")
+                    self.audioRecorder = nil
+                    self.recordingURL = nil
+                    completion?(false)
+                }
             } catch {
                 print("Failed to setup audio recorder: \(error)")
+                self.audioRecorder = nil
+                self.recordingURL = nil
+                completion?(false)
             }
             
             self.isPreparing = false

@@ -92,9 +92,14 @@ class OverlayController: ObservableObject {
                 hide()
             }
         } else {
-            // Re-capture focus anchors on hotkey toggle
-            FocusAndInsertService.shared.captureInteractionAnchor()
-            let point = FocusAndInsertService.shared.calculateOverlayPosition()
+            let mouseLoc = NSEvent.mouseLocation
+            var point = CGPoint(x: mouseLoc.x + 24, y: mouseLoc.y - 24)
+            
+            if let screen = NSScreen.main {
+               point.x = max(screen.visibleFrame.minX + 12, min(point.x, screen.visibleFrame.maxX - 92))
+               point.y = max(screen.visibleFrame.minY + 12, min(point.y, screen.visibleFrame.maxY - 92))
+            }
+            
             show(at: point)
         }
     }
@@ -102,27 +107,26 @@ class OverlayController: ObservableObject {
     // MARK: - Interactions
     
     func handleTap() {
-        if !PermissionsCoordinator.shared.isMicrophoneAuthorized {
-            if state == .error {
-                // If already in error and tapped again, open microphone settings
-                PermissionsCoordinator.shared.openSystemSettings(for: .microphone)
-                hide()
-            } else {
-                state = .error
-            }
-            return
-        }
-        
         switch state {
         case .idle:
-            state = .recording
-            FocusAndInsertService.shared.captureInitialFocus()
-            RecorderService.shared.startRecording()
+            RecorderService.shared.startRecording { [weak self] didStart in
+                guard let self = self else { return }
+                guard self.state == .idle else { return }
+
+                if didStart {
+                    self.state = .recording
+                } else {
+                    self.state = .error
+                }
+            }
         case .recording, .paused:
             // Do nothing on tap if recording (hold to stop handles it)
             break
-        case .transcribing, .error:
-            // Dismiss or reset on tap
+        case .error:
+            PermissionsCoordinator.shared.openSystemSettings(for: .microphone)
+            hide()
+        case .transcribing:
+            // Dismiss on tap
             state = .idle
             hide()
         }
@@ -142,8 +146,7 @@ class OverlayController: ObservableObject {
                 if let url = url {
                     self.transcribeAndInsert(fileUrl: url)
                 } else {
-                    self.showNotification(title: "Transcription Failed", body: "Could not save audio file.")
-                    self.hide()
+                    self.presentCompletionFeedback(title: "Transcription Failed", body: "Could not save audio file.")
                 }
             }
         }
@@ -169,35 +172,81 @@ class OverlayController: ObservableObject {
                 let text = try await transcriber.transcribe(audioFileURL: fileUrl)
                 print("Transcription Context:\n\(text)")
                 
-                // Copy to clipboard and potentially insert into focused app
-                let toastResult = FocusAndInsertService.shared.handleTranscription(text)
+                // Just copy to clipboard and notify
+                let pasteboard = NSPasteboard.general
+                pasteboard.clearContents()
+                pasteboard.setString(text, forType: .string)
                 
                 await MainActor.run {
-                    self.showNotification(title: "Voice Overlay", body: toastResult)
-                    self.hide()
+                    self.presentCompletionFeedback(title: "Voice Overlay", body: "Copied to clipboard")
                 }
             } catch {
                 print("Transcription failed: \(error)")
                 await MainActor.run {
-                    self.showNotification(title: "Transcription Error", body: error.localizedDescription)
-                    self.hide()
+                    self.presentCompletionFeedback(title: "Transcription Error", body: error.localizedDescription)
                 }
             }
         }
     }
     
-    private func showNotification(title: String, body: String) {
+    private func presentCompletionFeedback(title: String, body: String) {
+        let center = UNUserNotificationCenter.current()
+        center.getNotificationSettings { [weak self] settings in
+            guard let self = self else { return }
+            print("[Notifications] authorizationStatus=\(settings.authorizationStatus.rawValue), alertSetting=\(settings.alertSetting.rawValue), soundSetting=\(settings.soundSetting.rawValue)")
+            switch settings.authorizationStatus {
+            case .authorized, .provisional, .ephemeral:
+                self.scheduleNotification(title: title, body: body)
+                DispatchQueue.main.async {
+                    self.hide()
+                }
+            case .notDetermined:
+                center.requestAuthorization(options: [.alert, .sound]) { granted, _ in
+                    if granted {
+                        self.scheduleNotification(title: title, body: body)
+                        DispatchQueue.main.async {
+                            self.hide()
+                        }
+                    } else {
+                        DispatchQueue.main.async {
+                            self.showToastAndHide(body)
+                        }
+                    }
+                }
+            case .denied:
+                DispatchQueue.main.async {
+                    self.showToastAndHide(body)
+                }
+            @unknown default:
+                DispatchQueue.main.async {
+                    self.showToastAndHide(body)
+                }
+            }
+        }
+    }
+
+    private func scheduleNotification(title: String, body: String) {
         let content = UNMutableNotificationContent()
         content.title = title
         content.body = body
-        // Optionally add a sound
-        // content.sound = .default
-        
-        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
+        content.sound = .default
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 0.2, repeats: false)
+        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: trigger)
         UNUserNotificationCenter.current().add(request) { error in
             if let error = error {
                 print("Failed to deliver notification: \(error)")
+            } else {
+                print("[Notifications] Notification scheduled successfully")
             }
         }
+    }
+
+    private func showToastAndHide(_ message: String) {
+        toastMessage = message
+        hide(after: 1.8)
+    }
+
+    func sendDebugNotification() {
+        presentCompletionFeedback(title: "Voice Overlay Debug", body: "Test notification")
     }
 }

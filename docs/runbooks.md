@@ -16,6 +16,9 @@ defaults delete com.anti.VoiceOverlay
 ```bash
 security delete-generic-password -s "com.anti.VoiceOverlay" -a "com.anti.VoiceOverlay.APIKey"
 ```
+- Session-only mode:
+  - In Settings -> Transcription, disable `Store API key in Keychain`.
+  - Key is kept in memory and cleared on app exit.
 
 ## Manual Verification (Core)
 1. Launch app; verify menu-bar icon exists and Dock icon is hidden.

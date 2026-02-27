@@ -1,143 +1,185 @@
 import SwiftUI
 import AppKit
 
+enum SettingsTab: String, CaseIterable, Identifiable {
+    case hotkey = "Горячая клавиша"
+    case transcription = "Транскрибация"
+    case system = "Система"
+    
+    var id: String { rawValue }
+    
+    var icon: String {
+        switch self {
+        case .hotkey: return "keyboard"
+        case .transcription: return "waveform"
+        case .system: return "gearshape"
+        }
+    }
+}
+
 struct SettingsView: View {
     @ObservedObject var settings = SettingsManager.shared
     @State private var apiKeyInput: String = ""
+    @State private var selectedTab: SettingsTab = .hotkey
     
     var body: some View {
-        TabView {
-            // MARK: - Hotkey Tab
+        VStack(spacing: 0) {
+            // MARK: - Always-visible tab bar
+            HStack(spacing: 2) {
+                ForEach(SettingsTab.allCases) { tab in
+                    Button(action: { selectedTab = tab }) {
+                        Label(tab.rawValue, systemImage: tab.icon)
+                            .font(.system(size: 12, weight: selectedTab == tab ? .semibold : .regular))
+                            .foregroundColor(selectedTab == tab ? .accentColor : .secondary)
+                            .padding(.vertical, 8)
+                            .padding(.horizontal, 12)
+                            .contentShape(Rectangle())
+                            .background(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(selectedTab == tab ? Color.accentColor.opacity(0.12) : Color.clear)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.top, 10)
+            .padding(.bottom, 6)
+            
+            Divider()
+            
+            // MARK: - Tab content
+            Group {
+                switch selectedTab {
+                case .hotkey:
+                    hotkeyTab
+                case .transcription:
+                    transcriptionTab
+
+                case .system:
+                    systemTab
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .frame(width: 520, height: 370)
+        .background(Color(nsColor: .windowBackgroundColor))
+        .onAppear {
+            apiKeyInput = settings.getAPIKey() ?? ""
+        }
+    }
+    
+    // MARK: - Hotkey Tab
+    private var hotkeyTab: some View {
+        settingsPage {
             VStack(alignment: .leading, spacing: 16) {
-                Text("Global Hotkey")
+                Text("Глобальная горячая клавиша")
                     .font(.headline)
                 
-                Text("Press a key combination to toggle Voice Overlay. (Advanced configuration coming soon)")
+                Text("Нажмите сочетание клавиш, чтобы показать или скрыть Voice Overlay.")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                 
-                // Currently minimal: Just show a label representing the fact we can intercept in the future.
-                // Building a full interactive Carbon keycode interceptor in SwiftUI requires a custom NSViewRepresentable.
-                // For TG-9 basic persistence, we represent the values.
-                HStack {
-                    Text("Current Hotkey Code:")
-                    Text("\(settings.hotkeyKeyCode)")
-                        .bold()
-                }
+                HotkeyRecorderView(settings: settings)
+                    .padding(.top, 4)
                 
-                HStack {
-                    Text("Modifiers (Carbon Flags):")
-                    Text("\(settings.hotkeyModifiers)")
-                        .bold()
-                }
-                
-                Button("Reset to Default (Cmd+Shift+Space)") {
+                Button("Сбросить по умолчанию (Cmd+Shift+Space)") {
                     settings.hotkeyKeyCode = 49
                     settings.hotkeyModifiers = 768
                     HotkeyManager.shared.reloadHotkey()
                 }
-                
-                Spacer()
+                .padding(.top, 8)
             }
-            .padding()
-            .tabItem {
-                Label("Hotkey", systemImage: "keyboard")
-            }
-            
-            // MARK: - Transcription Tab
+        }
+    }
+    
+    // MARK: - Transcription Tab
+    private var transcriptionTab: some View {
+        settingsPage {
             VStack(alignment: .leading, spacing: 16) {
-                Text("Transcription Provider")
+                Text("Провайдер транскрибации")
                     .font(.headline)
                 
-                Picker("Provider", selection: $settings.providerSelection) {
-                    Text("Mock (Testing)").tag("mock")
-                    Text("OpenRouter (Gemini Flash)").tag("remote")
+                Picker("Провайдер", selection: $settings.providerSelection) {
+                    Text("Mock (Тестовый)").tag("mock")
+                    Text("OpenRouter").tag("remote")
                 }
                 .pickerStyle(.radioGroup)
                 
                 if settings.providerSelection == "remote" {
                     Divider()
                         .padding(.vertical, 8)
-                    Text("OpenRouter Configuration")
+                    Text("Настройки OpenRouter")
                         .font(.headline)
+
+                    Toggle("Хранить API-ключ в Связке ключей (Keychain)", isOn: $settings.storeAPIKeyInKeychain)
                     
                     HStack {
-                        SecureField("Paste your OpenRouter API key", text: $apiKeyInput)
+                        SecureField("Вставьте API-ключ OpenRouter", text: $apiKeyInput)
                             .textFieldStyle(.roundedBorder)
                             .onSubmit {
                                 settings.setAPIKey(apiKeyInput)
                             }
                         
-                        Button("Save Key") {
+                        Button("Сохранить") {
                             settings.setAPIKey(apiKeyInput)
+                        }
+
+                        Button("Удалить ключ") {
+                            settings.deleteAPIKey()
+                            apiKeyInput = ""
                         }
                     }
                     
                     if let storedKey = settings.getAPIKey(), !storedKey.isEmpty {
-                        Text("✅ Key saved (\(storedKey.count) chars)")
+                        Text("Ключ сохранен (\(storedKey.count) символов)")
                             .font(.caption)
                             .foregroundColor(.green)
                     } else {
-                        Text("⚠️ No API key saved")
+                        Text("Ключ не сохранен")
                             .font(.caption)
                             .foregroundColor(.orange)
                     }
                     
-                    Text("Stored securely in your macOS Keychain.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                    if settings.storeAPIKeyInKeychain {
+                        Text("Ключ хранится в системной Связке ключей macOS.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    } else {
+                        Text("Режим только на сессию: ключ хранится в памяти и удаляется при выходе из приложения.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
                     
-                    Text("Model: google/gemini-2.0-flash-001")
+                    Text("Модель: openai/gpt-4o-audio-preview")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
-                
-                Spacer()
-            }
-            .padding()
-            .onAppear {
-                apiKeyInput = settings.getAPIKey() ?? ""
-            }
-            .tabItem {
-                Label("Transcription", systemImage: "waveform")
-            }
-            
-            // MARK: - Insertion Tab
-            VStack(alignment: .leading, spacing: 16) {
-                Text("Insertion Behavior")
-                    .font(.headline)
-                
-                Toggle("Auto-insert into previously focused input", isOn: $settings.autoInsertEnabled)
-                Toggle("If direct insertion fails, fallback to Paste (Cmd+V)", isOn: $settings.fallbackToPaste)
-                Toggle("Always copy transcript to clipboard", isOn: $settings.alwaysCopy)
-                
-                Spacer()
-            }
-            .padding()
-            .tabItem {
-                Label("Insertion", systemImage: "text.cursor")
-            }
-            
-            // MARK: - Permissions & Diagnostics Tab
-            VStack(alignment: .leading, spacing: 16) {
-                Text("Permissions")
-                    .font(.headline)
-                
-                Button("Open System Settings (Microphone)") {
-                    PermissionsCoordinator.shared.openSystemSettings(for: .microphone)
-                }
-                
-                Button("Open System Settings (Accessibility)") {
-                    PermissionsCoordinator.shared.openSystemSettings(for: .accessibility)
-                }
-                
-                Spacer()
-            }
-            .padding()
-            .tabItem {
-                Label("System", systemImage: "gearshape")
             }
         }
-        .frame(width: 480, height: 320)
+    }
+    
+
+    // MARK: - System Tab
+    private var systemTab: some View {
+        settingsPage {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Разрешения")
+                    .font(.headline)
+                
+                Button("Открыть настройки macOS (Микрофон)") {
+                    PermissionsCoordinator.shared.openSystemSettings(for: .microphone)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func settingsPage<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        ScrollView {
+            content()
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding()
+        }
     }
 }

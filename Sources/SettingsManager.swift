@@ -7,12 +7,11 @@ class SettingsManager: ObservableObject {
     static let shared = SettingsManager()
     
     // Core UserDefaults Keys
+    // Core UserDefaults Keys
     private let kHotkeyKeyCode = "hotkeyKeyCode"
     private let kHotkeyModifiers = "hotkeyModifiers"
-    private let kAutoInsertEnabled = "autoInsertEnabled"
-    private let kFallbackToPaste = "fallbackToPaste"
-    private let kAlwaysCopy = "alwaysCopy"
     private let kProviderSelection = "providerSelection"
+    private let kStoreAPIKeyInKeychain = "storeAPIKeyInKeychain"
     
     // Keychain Constants
     private let kKeychainService = "com.anti.VoiceOverlay"
@@ -31,21 +30,17 @@ class SettingsManager: ObservableObject {
         didSet { UserDefaults.standard.set(hotkeyModifiers, forKey: kHotkeyModifiers) }
     }
     
-    @Published var autoInsertEnabled: Bool {
-        didSet { UserDefaults.standard.set(autoInsertEnabled, forKey: kAutoInsertEnabled) }
-    }
-    
-    @Published var fallbackToPaste: Bool {
-        didSet { UserDefaults.standard.set(fallbackToPaste, forKey: kFallbackToPaste) }
-    }
-    
-    @Published var alwaysCopy: Bool {
-        didSet { UserDefaults.standard.set(alwaysCopy, forKey: kAlwaysCopy) }
-    }
-    
+
     @Published var providerSelection: String {
         didSet { UserDefaults.standard.set(providerSelection, forKey: kProviderSelection) }
     }
+
+    @Published var storeAPIKeyInKeychain: Bool {
+        didSet { UserDefaults.standard.set(storeAPIKeyInKeychain, forKey: kStoreAPIKeyInKeychain) }
+    }
+
+    // Used when keychain persistence is disabled.
+    private var sessionAPIKey: String?
     
     private init() {
         let defaults = UserDefaults.standard
@@ -54,24 +49,49 @@ class SettingsManager: ObservableObject {
         defaults.register(defaults: [
             kHotkeyKeyCode: 49,
             kHotkeyModifiers: 768,
-            kAutoInsertEnabled: true,
-            kFallbackToPaste: true,
-            kAlwaysCopy: true,
-            kProviderSelection: "mock"
+            kProviderSelection: "mock",
+            kStoreAPIKeyInKeychain: true
         ])
         
         self.hotkeyKeyCode = defaults.integer(forKey: kHotkeyKeyCode)
         self.hotkeyModifiers = defaults.integer(forKey: kHotkeyModifiers)
-        self.autoInsertEnabled = defaults.bool(forKey: kAutoInsertEnabled)
-        self.fallbackToPaste = defaults.bool(forKey: kFallbackToPaste)
-        self.alwaysCopy = defaults.bool(forKey: kAlwaysCopy)
         self.providerSelection = defaults.string(forKey: kProviderSelection) ?? "mock"
+        self.storeAPIKeyInKeychain = defaults.bool(forKey: kStoreAPIKeyInKeychain)
     }
     
     // MARK: - API Key (Keychain)
     
     /// Reads the API Key from the system Keychain
     func getAPIKey() -> String? {
+        if !storeAPIKeyInKeychain {
+            return sessionAPIKey
+        }
+
+        return readAPIKeyFromKeychain()
+    }
+
+    /// Writes or updates the API key based on selected storage mode.
+    func setAPIKey(_ key: String) {
+        let trimmedKey = key.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedKey.isEmpty else { return }
+
+        if storeAPIKeyInKeychain {
+            writeAPIKeyToKeychain(trimmedKey)
+            sessionAPIKey = nil
+        } else {
+            sessionAPIKey = trimmedKey
+        }
+    }
+
+    /// Removes key from both session memory and keychain.
+    func deleteAPIKey() {
+        sessionAPIKey = nil
+        deleteAPIKeyFromKeychain()
+    }
+
+    // MARK: - Keychain internals
+
+    private func readAPIKeyFromKeychain() -> String? {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: kKeychainService,
@@ -88,12 +108,10 @@ class SettingsManager: ObservableObject {
         }
         return nil
     }
-    
-    /// Writes or updates the API Key in the system Keychain
-    func setAPIKey(_ key: String) {
-        let trimmedKey = key.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let data = trimmedKey.data(using: .utf8) else { return }
-        
+
+    private func writeAPIKeyToKeychain(_ key: String) {
+        guard let data = key.data(using: .utf8) else { return }
+
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: kKeychainService,
@@ -112,5 +130,15 @@ class SettingsManager: ObservableObject {
             newItem[kSecValueData as String] = data
             SecItemAdd(newItem as CFDictionary, nil)
         }
+    }
+
+    private func deleteAPIKeyFromKeychain() {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: kKeychainService,
+            kSecAttrAccount as String: kKeychainAccountAPIKey
+        ]
+
+        SecItemDelete(query as CFDictionary)
     }
 }
