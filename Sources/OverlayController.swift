@@ -156,27 +156,37 @@ class OverlayController: ObservableObject {
         // Determine transcriber
         let transcriber: TranscriptionService
         let settings = SettingsManager.shared
-        let provider = settings.providerSelection
-        let apiKey = settings.getAPIKey() ?? ""
         
-        if provider == "mock" {
-            transcriber = MockTranscriptionService()
-        } else if apiKey.isEmpty {
-            print("[\(provider.capitalized)] Selected but no API key found. Falling back to Mock.")
-            transcriber = MockTranscriptionService()
-        } else {
-            switch provider {
-            case "openai":
-                transcriber = OpenAITranscriptionService(apiKey: apiKey, model: settings.selectedModel)
-            case "gemini":
-                transcriber = GeminiTranscriptionService(apiKey: apiKey, model: settings.selectedModel)
-            case "openrouter":
-                transcriber = RemoteTranscriptionService(apiKey: apiKey, model: settings.selectedModel, baseURL: "https://openrouter.ai/api/v1")
-            case "custom":
-                transcriber = RemoteTranscriptionService(apiKey: apiKey, model: settings.customProviderModel, baseURL: settings.customProviderBaseURL)
-            default:
+        if let activeId = settings.activeProviderId,
+           let config = settings.savedProviders.first(where: { $0.id == activeId }) {
+            
+            let apiKey = settings.getAPIKey(for: activeId) ?? ""
+            
+            // Allow mock to work without key. Other providers need one, unless custom logic applies.
+            if apiKey.isEmpty && config.type != "mock" {
+                print("[\(config.name)] Selected but no API key found. Falling back to Mock.")
                 transcriber = MockTranscriptionService()
+            } else {
+                switch config.type {
+                case "openai":
+                    transcriber = OpenAITranscriptionService(apiKey: apiKey, model: config.model)
+                case "gemini":
+                    transcriber = GeminiTranscriptionService(apiKey: apiKey, model: config.model)
+                case "openrouter":
+                    transcriber = RemoteTranscriptionService(apiKey: apiKey, model: config.model, baseURL: "https://openrouter.ai/api/v1")
+                case "custom":
+                    let base = config.baseURL ?? "https://api.openai.com/v1"
+                    let cleanBase = base.hasSuffix("/chat/completions") ? base.replacingOccurrences(of: "/chat/completions", with: "") : base.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+                    transcriber = RemoteTranscriptionService(apiKey: apiKey, model: config.model, baseURL: cleanBase)
+                case "mock":
+                    transcriber = MockTranscriptionService()
+                default:
+                    transcriber = MockTranscriptionService()
+                }
             }
+        } else {
+            print("No active provider found. Falling back to Mock.")
+            transcriber = MockTranscriptionService()
         }
         
         // Kick off async transcription

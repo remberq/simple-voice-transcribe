@@ -58,7 +58,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         // Pre-warm the Keychain access and proactively ask for Permissions on first launch.
         // Doing this here prevents the Keychain Prompt from blocking the Settings window UI later.
         DispatchQueue.global(qos: .userInitiated).async {
-            _ = SettingsManager.shared.getAPIKey()
+            if let activeId = SettingsManager.shared.activeProviderId {
+                _ = SettingsManager.shared.getAPIKey(for: activeId)
+            }
             DispatchQueue.main.async {
                 PermissionsCoordinator.shared.requestAll { _ in }
             }
