@@ -33,7 +33,9 @@ $(APP_DIR): $(SWIFT_FILES) Info.plist
 	else \
 		echo "=> Skipping codesign (SIGN_APP=$(SIGN_APP))"; \
 	fi
-	@echo "=> Build successful: $(APP_DIR)"
+	@echo "=> Packaging $(APP_NAME).zip..."
+	@cd $(BUILD_DIR) && rm -f $(APP_NAME).zip && zip -r -q $(APP_NAME).zip $(APP_NAME).app
+	@echo "=> Build & Packaging successful: $(BUILD_DIR)/$(APP_NAME).zip"
 
 run: build
 	@echo "=> Running $(APP_NAME)..."
