@@ -219,9 +219,13 @@ struct SettingsView: View {
                     Text("Свой (Custom OpenAI)").tag("custom")
                 }
                 .pickerStyle(.menu)
-                .frame(width: 300)
                 .onChange(of: newProviderType) { _ in
+                    newAPIKey = ""
+                    newProviderName = ""
+                    newCustomBaseURL = ""
                     resetFetchState()
+                    formError = nil
+                    connectionTestResult = ""
                 }
             }
             
