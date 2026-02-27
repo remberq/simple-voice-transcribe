@@ -37,7 +37,11 @@ class ModelFetcherService {
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         
         let (data, response) = try await URLSession.shared.data(for: request)
-        guard (response as? HTTPURLResponse)?.statusCode == 200 else { throw FetchError.invalidResponse }
+        guard let httpResponse = response as? HTTPURLResponse else { throw FetchError.invalidResponse }
+        guard httpResponse.statusCode == 200 else {
+            Logger.shared.error("OpenAI fetch models failed: \(httpResponse.statusCode)")
+            throw FetchError.invalidResponse
+        }
         
         let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
         guard let dataArray = json?["data"] as? [[String: Any]] else { throw FetchError.parsingError }
@@ -62,7 +66,11 @@ class ModelFetcherService {
         request.setValue("Voice Overlay macOS App", forHTTPHeaderField: "X-Title")
         
         let (data, response) = try await URLSession.shared.data(for: request)
-        guard (response as? HTTPURLResponse)?.statusCode == 200 else { throw FetchError.invalidResponse }
+        guard let httpResponse = response as? HTTPURLResponse else { throw FetchError.invalidResponse }
+        guard httpResponse.statusCode == 200 else {
+            Logger.shared.error("OpenRouter fetch models failed: \(httpResponse.statusCode)")
+            throw FetchError.invalidResponse
+        }
         
         let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
         guard let dataArray = json?["data"] as? [[String: Any]] else { throw FetchError.parsingError }

@@ -478,6 +478,17 @@ struct SettingsView: View {
                 
                 Toggle("Хранить все API ключи в Keychain", isOn: $settings.storeAPIKeyInKeychain)
                     .padding(.top, 16)
+                    
+                Divider()
+                    .padding(.vertical, 8)
+                    
+                Text("Логи")
+                    .font(.headline)
+                    
+                Button("Открыть папку с логами") {
+                    let logDir = Logger.shared.logsDirectory
+                    NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: logDir.path)
+                }
             }
         }
     }

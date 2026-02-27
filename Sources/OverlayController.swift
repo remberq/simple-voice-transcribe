@@ -164,7 +164,7 @@ class OverlayController: ObservableObject {
             
             // Allow mock to work without key. Other providers need one, unless custom logic applies.
             if apiKey.isEmpty && config.type != "mock" {
-                print("[\(config.name)] Selected but no API key found. Falling back to Mock.")
+                Logger.shared.error("[\(config.name)] Selected but no API key found. Falling back to Mock.")
                 transcriber = MockTranscriptionService()
             } else {
                 switch config.type {
@@ -185,7 +185,7 @@ class OverlayController: ObservableObject {
                 }
             }
         } else {
-            print("No active provider found. Falling back to Mock.")
+            Logger.shared.error("No active provider found. Falling back to Mock.")
             transcriber = MockTranscriptionService()
         }
         
@@ -193,7 +193,7 @@ class OverlayController: ObservableObject {
         Task {
             do {
                 let text = try await transcriber.transcribe(audioFileURL: fileUrl)
-                print("Transcription Context:\n\(text)")
+                Logger.shared.info("Transcription completed successfully. Length: \(text.count)")
                 
                 // Just copy to clipboard and notify
                 let pasteboard = NSPasteboard.general
@@ -204,7 +204,7 @@ class OverlayController: ObservableObject {
                     self.presentCompletionFeedback(title: "Voice Overlay", body: "Copied to clipboard")
                 }
             } catch {
-                print("Transcription failed: \(error)")
+                Logger.shared.error("Transcription failed: \(error.localizedDescription)")
                 await MainActor.run {
                     self.presentCompletionFeedback(title: "Transcription Error", body: error.localizedDescription)
                 }
@@ -216,7 +216,7 @@ class OverlayController: ObservableObject {
         let center = UNUserNotificationCenter.current()
         center.getNotificationSettings { [weak self] settings in
             guard let self = self else { return }
-            print("[Notifications] authorizationStatus=\(settings.authorizationStatus.rawValue), alertSetting=\(settings.alertSetting.rawValue), soundSetting=\(settings.soundSetting.rawValue)")
+            Logger.shared.info("[Notifications] authorizationStatus=\(settings.authorizationStatus.rawValue)")
             switch settings.authorizationStatus {
             case .authorized, .provisional, .ephemeral:
                 self.scheduleNotification(title: title, body: body)
@@ -257,9 +257,9 @@ class OverlayController: ObservableObject {
         let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: trigger)
         UNUserNotificationCenter.current().add(request) { error in
             if let error = error {
-                print("Failed to deliver notification: \(error)")
+                Logger.shared.error("Failed to deliver notification: \(error.localizedDescription)")
             } else {
-                print("[Notifications] Notification scheduled successfully")
+                Logger.shared.info("[Notifications] Notification scheduled successfully")
             }
         }
     }
