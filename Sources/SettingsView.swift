@@ -277,41 +277,6 @@ struct SettingsView: View {
                                 newSelectedModel = "faster-whisper-large-v3"
                             }
                         }
-                        
-                        DisclosureGroup("Дополнительные параметры", isExpanded: $showAdvanced) {
-                            VStack(alignment: .leading, spacing: 10) {
-                                HStack {
-                                    Text("Промпт:")
-                                        .frame(width: 140, alignment: .trailing)
-                                    TextField("Опционально", text: $newPrompt)
-                                        .textFieldStyle(.roundedBorder)
-                                        .frame(width: 300)
-                                }
-                                
-                                HStack {
-                                    Text("Количество спикеров:")
-                                        .frame(width: 140, alignment: .trailing)
-                                    TextField("Например, 2", text: $newSpeakerCount)
-                                        .textFieldStyle(.roundedBorder)
-                                        .frame(width: 300)
-                                }
-                                
-                                HStack {
-                                    Text("Язык:")
-                                        .frame(width: 140, alignment: .trailing)
-                                    Picker("", selection: $newLanguage) {
-                                        Text("Russian (ru)").tag("ru")
-                                        Text("English (en)").tag("en")
-                                    }
-                                    .pickerStyle(.radioGroup)
-                                    .horizontalRadioGroupLayout()
-                                }
-                            }
-                            .padding(.top, 5)
-                            .padding(.bottom, 5)
-                        }
-                        .frame(width: 450)
-                        
                     } else {
                         HStack {
                             Button("Загрузить модели") {
@@ -348,6 +313,46 @@ struct SettingsView: View {
                                 .foregroundColor(.secondary)
                         }
                     }
+                }
+            }
+            
+            if newProviderType == "raif" {
+                HStack(alignment: .top) {
+                    Text("Параметры:"); Spacer()
+                    DisclosureGroup("Дополнительные настройки", isExpanded: $showAdvanced) {
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack {
+                                Text("Промпт:").font(.caption)
+                                Spacer()
+                                TextField("Опционально", text: $newPrompt)
+                                    .textFieldStyle(.roundedBorder)
+                                    .frame(width: 180)
+                            }
+                            
+                            HStack {
+                                Text("Спикеров:").font(.caption)
+                                Spacer()
+                                TextField("Например, 2", text: $newSpeakerCount)
+                                    .textFieldStyle(.roundedBorder)
+                                    .frame(width: 180)
+                            }
+                            
+                            HStack {
+                                Text("Язык:").font(.caption)
+                                Spacer()
+                                Picker("", selection: $newLanguage) {
+                                    Text("ru").tag("ru")
+                                    Text("en").tag("en")
+                                }
+                                .pickerStyle(.radioGroup)
+                                .horizontalRadioGroupLayout()
+                                .frame(width: 180, alignment: .leading)
+                            }
+                        }
+                        .padding(.top, 5)
+                        .padding(.bottom, 5)
+                    }
+                    .frame(width: 300)
                 }
             }
             
