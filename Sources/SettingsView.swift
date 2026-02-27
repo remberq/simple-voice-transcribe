@@ -216,6 +216,7 @@ struct SettingsView: View {
                     Text("OpenAI").tag("openai")
                     Text("Google Gemini").tag("gemini")
                     Text("OpenRouter").tag("openrouter")
+                    Text("Райффайзен (Raif)").tag("raif")
                     Text("Свой (Custom OpenAI)").tag("custom")
                 }
                 .pickerStyle(.menu)
@@ -258,6 +259,18 @@ struct SettingsView: View {
                         TextField("Название модели", text: $newSelectedModel)
                             .textFieldStyle(.roundedBorder)
                             .frame(width: 300)
+                    } else if newProviderType == "raif" {
+                        Picker("", selection: $newSelectedModel) {
+                            Text("faster-whisper-large-v3").tag("faster-whisper-large-v3")
+                            Text("gigaam-v2-rnnt").tag("gigaam-v2-rnnt")
+                        }
+                        .pickerStyle(.menu)
+                        .frame(width: 300)
+                        .onAppear {
+                            if newSelectedModel.isEmpty {
+                                newSelectedModel = "faster-whisper-large-v3"
+                            }
+                        }
                     } else {
                         HStack {
                             Button("Загрузить модели") {
@@ -373,7 +386,15 @@ struct SettingsView: View {
             return
         }
         
-        let providerName = newProviderType == "custom" ? newProviderName : (newProviderType == "openai" ? "OpenAI" : (newProviderType == "gemini" ? "Google Gemini" : "OpenRouter"))
+        let providerName: String
+        switch newProviderType {
+        case "custom": providerName = newProviderName
+        case "openai": providerName = "OpenAI"
+        case "gemini": providerName = "Google Gemini"
+        case "openrouter": providerName = "OpenRouter"
+        case "raif": providerName = "Райффайзен"
+        default: providerName = "Неизвестно"
+        }
         
         let config = ProviderConfig(
             id: UUID(),
@@ -399,6 +420,12 @@ struct SettingsView: View {
                 urlString = "https://openrouter.ai/api/v1/models"
             case "gemini":
                 urlString = "https://generativelanguage.googleapis.com/v1beta/models?key=\(apiKey)"
+            case "raif":
+                // the screenshot docs don't define a GET /models, they define POST /v1/audio/transcriptions
+                // but any request without the file to the transcription endpoint will yield an error, 
+                // so we will just hit the base endpoints and see if it's reachable or do a dummy request.
+                // Let's do a dummy POST without complete body, if it's 400 Bad Request, auth succeeded. If 401, auth failed.
+                urlString = "https://llm-api.cibaa.raiffeisen.ru/v1/audio/transcriptions"
             case "custom":
                 let base = config.baseURL ?? ""
                 let cleanBase = base.hasSuffix("/chat/completions") ? base.replacingOccurrences(of: "/chat/completions", with: "") : base.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
@@ -414,7 +441,7 @@ struct SettingsView: View {
             }
             
             var request = URLRequest(url: url)
-            request.httpMethod = "GET"
+            request.httpMethod = config.type == "raif" ? "POST" : "GET"
             
             if config.type != "gemini" {
                 request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
@@ -443,11 +470,27 @@ struct SettingsView: View {
                                 self.settings.activeProviderId = config.id
                             }
                             
-                            // Delayed close
                             DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
                                 self.isAddingProvider = false
                             }
                             
+                        // For Raiffeisen, 400 (Bad Request) means Auth was completely fine, but payload was missing text, which is what we did.
+                        } else if config.type == "raif" && httpResponse.statusCode == 400 {
+                            self.connectionTestSuccess = true
+                            self.connectionTestResult = "Успешное подключение! Провайдер добавлен."
+                            
+                            // Success -> Save
+                            self.settings.savedProviders.append(config)
+                            self.settings.setAPIKey(apiKey, for: config.id)
+                            
+                            if self.settings.activeProviderId == nil {
+                                self.settings.activeProviderId = config.id
+                            }
+                            
+                            // Delayed close
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                                self.isAddingProvider = false
+                            }
                         } else if httpResponse.statusCode == 401 || httpResponse.statusCode == 400 {
                             self.formError = "Ошибка соединения: Неверный API ключ"
                         } else {

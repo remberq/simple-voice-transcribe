@@ -178,6 +178,8 @@ class OverlayController: ObservableObject {
                     let base = config.baseURL ?? "https://api.openai.com/v1"
                     let cleanBase = base.hasSuffix("/chat/completions") ? base.replacingOccurrences(of: "/chat/completions", with: "") : base.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
                     transcriber = RemoteTranscriptionService(apiKey: apiKey, model: config.model, baseURL: cleanBase)
+                case "raif":
+                    transcriber = OpenAITranscriptionService(apiKey: apiKey, model: config.model, baseURL: "https://llm-api.cibaa.raiffeisen.ru/v1")
                 case "mock":
                     transcriber = MockTranscriptionService()
                 default:
