@@ -70,9 +70,9 @@ class ModelFetcherService {
         var parsedModels = [FetchedModel]()
         for dict in dataArray {
             guard let id = dict["id"] as? String else { continue }
-            // STT on openrouter usually ends in "audio" or "whisper", or we just return all multimodal ones, 
-            // but for safety we'll return all and let user pick, highlighting free ones.
-            // Often STT is "openai/whisper-large-v3" or "openai/gpt-4o-audio-preview".
+            // Filter STT models: typical OpenRouter IDs contain "audio" or "whisper"
+            let lowerId = id.lowercased()
+            guard lowerId.contains("audio") || lowerId.contains("whisper") else { continue }
             
             var isFree = false
             if let pricing = dict["pricing"] as? [String: Any],

@@ -250,43 +250,45 @@ struct SettingsView: View {
             HStack {
                 Text("Модель:"); Spacer()
                 VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        Button("Загрузить модели") {
-                            fetchModels()
-                        }
-                        .disabled(newProviderType != "custom" && newAPIKey.isEmpty && newProviderType != "openrouter")
-                        
-                        if isFetchingModels {
-                            ProgressView().scaleEffect(0.5).frame(height: 10)
-                        }
-                    }
-                    
-                    if let error = fetchError {
-                        Text(error).foregroundColor(.red).font(.caption)
-                    }
-                    
-                    if !fetchedModels.isEmpty {
-                        Picker("", selection: $newSelectedModel) {
-                            ForEach(fetchedModels, id: \.id) { model in
-                                HStack {
-                                    Text(model.id)
-                                    if model.isFree {
-                                        Text(" 🎁 Бесплатно")
-                                    }
-                                }
-                                .tag(model.id)
-                            }
-                        }
-                        .pickerStyle(.menu)
-                        .frame(width: 300)
-                    } else if newProviderType == "custom" {
+                    if newProviderType == "custom" {
                         TextField("Название модели", text: $newSelectedModel)
                             .textFieldStyle(.roundedBorder)
                             .frame(width: 300)
                     } else {
-                        Text("Нажмите 'Загрузить модели', чтобы выбрать.")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                        HStack {
+                            Button("Загрузить модели") {
+                                fetchModels()
+                            }
+                            .disabled(newAPIKey.isEmpty && newProviderType != "openrouter")
+                            
+                            if isFetchingModels {
+                                ProgressView().scaleEffect(0.5).frame(height: 10)
+                            }
+                        }
+                        
+                        if let error = fetchError {
+                            Text(error).foregroundColor(.red).font(.caption)
+                        }
+                        
+                        if !fetchedModels.isEmpty {
+                            Picker("", selection: $newSelectedModel) {
+                                ForEach(fetchedModels, id: \.id) { model in
+                                    HStack {
+                                        Text(model.id)
+                                        if model.isFree {
+                                            Text(" 🎁 Бесплатно")
+                                        }
+                                    }
+                                    .tag(model.id)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                            .frame(width: 300)
+                        } else {
+                            Text("Нажмите 'Загрузить модели', чтобы выбрать.")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
                     }
                 }
             }
