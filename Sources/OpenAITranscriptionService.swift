@@ -5,11 +5,17 @@ class OpenAITranscriptionService: TranscriptionService {
     private let baseURL: URL
     private let model: String
     private let apiKey: String
+    private let prompt: String?
+    private let language: String?
+    private let speakerCount: String?
     
     // Default to OpenAI's public API, but allow overrides for custom endpoints
-    init(apiKey: String, model: String = "whisper-1", baseURL: String = "https://api.openai.com/v1") {
+    init(apiKey: String, model: String = "whisper-1", baseURL: String = "https://api.openai.com/v1", prompt: String? = nil, language: String? = nil, speakerCount: String? = nil) {
         self.apiKey = apiKey
         self.model = model
+        self.prompt = prompt
+        self.language = language
+        self.speakerCount = speakerCount
         self.baseURL = URL(string: baseURL) ?? URL(string: "https://api.openai.com/v1")!
     }
     
@@ -48,6 +54,25 @@ class OpenAITranscriptionService: TranscriptionService {
         body.append("--\(boundary)\r\n".data(using: .utf8)!)
         body.append("Content-Disposition: form-data; name=\"model\"\r\n\r\n".data(using: .utf8)!)
         body.append("\(model)\r\n".data(using: .utf8)!)
+        
+        if let prompt = prompt, !prompt.isEmpty {
+            body.append("--\(boundary)\r\n".data(using: .utf8)!)
+            body.append("Content-Disposition: form-data; name=\"prompt\"\r\n\r\n".data(using: .utf8)!)
+            body.append("\(prompt)\r\n".data(using: .utf8)!)
+        }
+        
+        if let language = language, !language.isEmpty {
+            body.append("--\(boundary)\r\n".data(using: .utf8)!)
+            body.append("Content-Disposition: form-data; name=\"language\"\r\n\r\n".data(using: .utf8)!)
+            body.append("\(language)\r\n".data(using: .utf8)!)
+        }
+        
+        // Custom Raiffeisen-specific speaker_count, though standard OpenAI whisper doesn't use it, Raiffeisen does.
+        if let speakerCount = speakerCount, !speakerCount.isEmpty {
+            body.append("--\(boundary)\r\n".data(using: .utf8)!)
+            body.append("Content-Disposition: form-data; name=\"speaker_count\"\r\n\r\n".data(using: .utf8)!)
+            body.append("\(speakerCount)\r\n".data(using: .utf8)!)
+        }
         
         // Add response_format parameter (only if NOT Raiffeisen, as strict FastAPI endpoints return 422 for extra fields)
         if !baseURL.absoluteString.contains("raiffeisen.ru") {

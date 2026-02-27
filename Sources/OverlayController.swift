@@ -86,7 +86,7 @@ class OverlayController: ObservableObject {
     func toggle() {
         if let panel = panel, panel.isVisible {
             if state == .recording {
-                // If recording, stop and transcribe instead of discarding
+                // If recording, stop and transcribe instantly
                 handleStop()
             } else {
                 hide()
@@ -101,6 +101,11 @@ class OverlayController: ObservableObject {
             }
             
             show(at: point)
+            
+            // Instantly start recording
+            if state == .idle {
+                handleTap()
+            }
         }
     }
     
@@ -179,7 +184,14 @@ class OverlayController: ObservableObject {
                     let cleanBase = base.hasSuffix("/chat/completions") ? base.replacingOccurrences(of: "/chat/completions", with: "") : base.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
                     transcriber = RemoteTranscriptionService(apiKey: apiKey, model: config.model, baseURL: cleanBase)
                 case "raif":
-                    transcriber = OpenAITranscriptionService(apiKey: apiKey, model: config.model, baseURL: "https://llm-api.cibaa.raiffeisen.ru/v1")
+                    transcriber = OpenAITranscriptionService(
+                        apiKey: apiKey,
+                        model: config.model,
+                        baseURL: "https://llm-api.cibaa.raiffeisen.ru/v1",
+                        prompt: config.prompt,
+                        language: config.language,
+                        speakerCount: config.speakerCount
+                    )
                 case "mock":
                     transcriber = MockTranscriptionService()
                 default:

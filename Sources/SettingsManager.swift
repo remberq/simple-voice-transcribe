@@ -9,6 +9,11 @@ struct ProviderConfig: Codable, Identifiable, Equatable {
     var name: String // Display name
     var baseURL: String? // For custom servers
     var model: String
+    
+    // Optional advanced fields
+    var prompt: String?
+    var language: String? // e.g. "ru", "en"
+    var speakerCount: String?
 }
 
 /// A singleton managing both UserDefaults (booleans, ints) and Keychain (sensitive strings)

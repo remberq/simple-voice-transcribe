@@ -29,6 +29,12 @@ struct SettingsView: View {
     @State private var newCustomBaseURL: String = ""
     @State private var newSelectedModel: String = ""
     
+    // Advanced Raiffeisen Fields
+    @State private var showAdvanced: Bool = false
+    @State private var newPrompt: String = ""
+    @State private var newSpeakerCount: String = ""
+    @State private var newLanguage: String = "ru"
+    
     @State private var fetchedModels: [FetchedModel] = []
     @State private var isFetchingModels = false
     @State private var fetchError: String? = nil
@@ -214,10 +220,10 @@ struct SettingsView: View {
                 Text("Тип:"); Spacer()
                 Picker("", selection: $newProviderType) {
                     Text("OpenAI").tag("openai")
-                    Text("Google Gemini").tag("gemini")
+                    // Text("Google Gemini").tag("gemini") // Hidden per user request
                     Text("OpenRouter").tag("openrouter")
                     Text("Райффайзен (Raif)").tag("raif")
-                    Text("Свой (Custom OpenAI)").tag("custom")
+                    // Text("Свой (Custom OpenAI)").tag("custom") // Hidden per user request
                 }
                 .pickerStyle(.menu)
                 .onChange(of: newProviderType) { _ in
@@ -271,6 +277,41 @@ struct SettingsView: View {
                                 newSelectedModel = "faster-whisper-large-v3"
                             }
                         }
+                        
+                        DisclosureGroup("Дополнительные параметры", isExpanded: $showAdvanced) {
+                            VStack(alignment: .leading, spacing: 10) {
+                                HStack {
+                                    Text("Промпт:")
+                                        .frame(width: 140, alignment: .trailing)
+                                    TextField("Опционально", text: $newPrompt)
+                                        .textFieldStyle(.roundedBorder)
+                                        .frame(width: 300)
+                                }
+                                
+                                HStack {
+                                    Text("Количество спикеров:")
+                                        .frame(width: 140, alignment: .trailing)
+                                    TextField("Например, 2", text: $newSpeakerCount)
+                                        .textFieldStyle(.roundedBorder)
+                                        .frame(width: 300)
+                                }
+                                
+                                HStack {
+                                    Text("Язык:")
+                                        .frame(width: 140, alignment: .trailing)
+                                    Picker("", selection: $newLanguage) {
+                                        Text("Russian (ru)").tag("ru")
+                                        Text("English (en)").tag("en")
+                                    }
+                                    .pickerStyle(.radioGroup)
+                                    .horizontalRadioGroupLayout()
+                                }
+                            }
+                            .padding(.top, 5)
+                            .padding(.bottom, 5)
+                        }
+                        .frame(width: 450)
+                        
                     } else {
                         HStack {
                             Button("Загрузить модели") {
@@ -401,7 +442,10 @@ struct SettingsView: View {
             type: newProviderType,
             name: providerName,
             baseURL: newProviderType == "custom" ? newCustomBaseURL : nil,
-            model: newSelectedModel
+            model: newSelectedModel.isEmpty ? "default" : newSelectedModel,
+            prompt: newProviderType == "raif" && !newPrompt.isEmpty ? newPrompt : nil,
+            language: newProviderType == "raif" ? newLanguage : nil,
+            speakerCount: newProviderType == "raif" && !newSpeakerCount.isEmpty ? newSpeakerCount : nil
         )
         
         testConnection(config: config, apiKey: newAPIKey)
