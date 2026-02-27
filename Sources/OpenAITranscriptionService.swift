@@ -49,12 +49,12 @@ class OpenAITranscriptionService: TranscriptionService {
         body.append("Content-Disposition: form-data; name=\"model\"\r\n\r\n".data(using: .utf8)!)
         body.append("\(model)\r\n".data(using: .utf8)!)
         
-        // Add language parameter (optional, but good for speed if known, we omit for auto-detect by default)
-        
-        // Add response_format parameter
-        body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"response_format\"\r\n\r\n".data(using: .utf8)!)
-        body.append("json\r\n".data(using: .utf8)!)
+        // Add response_format parameter (only if NOT Raiffeisen, as strict FastAPI endpoints return 422 for extra fields)
+        if !baseURL.absoluteString.contains("raiffeisen.ru") {
+            body.append("--\(boundary)\r\n".data(using: .utf8)!)
+            body.append("Content-Disposition: form-data; name=\"response_format\"\r\n\r\n".data(using: .utf8)!)
+            body.append("json\r\n".data(using: .utf8)!)
+        }
         
         // Add file parameter
         let filename = audioFileURL.lastPathComponent

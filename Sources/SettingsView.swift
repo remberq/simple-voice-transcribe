@@ -474,8 +474,9 @@ struct SettingsView: View {
                                 self.isAddingProvider = false
                             }
                             
-                        // For Raiffeisen, 400 (Bad Request) means Auth was completely fine, but payload was missing text, which is what we did.
-                        } else if config.type == "raif" && httpResponse.statusCode == 400 {
+                        // For Raiffeisen, 400 or 422 means Auth was completely fine, but payload was missing text, which is what we did on an empty POST test.
+                        // FastAPI/Pydantic returns 422 Unprocessable Entity for missing form-data.
+                        } else if config.type == "raif" && (httpResponse.statusCode == 400 || httpResponse.statusCode == 422) {
                             self.connectionTestSuccess = true
                             self.connectionTestResult = "Успешное подключение! Провайдер добавлен."
                             
