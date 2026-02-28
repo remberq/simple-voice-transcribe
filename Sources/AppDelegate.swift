@@ -3,8 +3,9 @@ import SwiftUI
 import UserNotifications
 import Combine
 
-class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
+class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate, NSMenuDelegate {
     var statusItem: NSStatusItem!
+    var appMenu: NSMenu!
     var settingsWindow: NSWindow?
     private var overlayStateCancellable: AnyCancellable?
     private var transcribingAnimationTimer: Timer?
@@ -28,13 +29,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
             }
         }
         
-        // Create the status item in the menu bar
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        
-        if let button = statusItem.button {
-            button.image = makeStatusSymbolImage(named: idleStatusSymbolName)
-        }
-
         // Ensure app icon is explicitly set for system surfaces (for example notifications).
         if let iconURL = Bundle.main.url(forResource: "AppIcon", withExtension: "icns"),
            let appIcon = NSImage(contentsOf: iconURL) {
@@ -50,7 +44,16 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "Quit", action: #selector(quitApp), keyEquivalent: "q"))
         
-        statusItem.menu = menu
+        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        self.appMenu = menu
+        self.appMenu.delegate = self
+        
+        if let button = statusItem.button {
+            button.image = makeStatusSymbolImage(named: idleStatusSymbolName)
+            button.action = #selector(statusBarButtonClicked(_:))
+            button.target = self
+            button.sendAction(on: [.leftMouseUp, .rightMouseUp])
+        }
         
         // Setup overlay silently
         OverlayController.shared.setup()
@@ -58,7 +61,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         // Pre-warm the Keychain access and proactively ask for Permissions on first launch.
         // Doing this here prevents the Keychain Prompt from blocking the Settings window UI later.
         DispatchQueue.global(qos: .userInitiated).async {
-            _ = SettingsManager.shared.getAPIKey()
+            if let activeId = SettingsManager.shared.activeProviderId {
+                _ = SettingsManager.shared.getAPIKey(for: activeId)
+            }
             DispatchQueue.main.async {
                 PermissionsCoordinator.shared.requestAll { _ in }
             }
@@ -76,6 +81,21 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     
     @objc func toggleOverlay() {
         OverlayController.shared.toggle()
+    }
+    
+    @objc func statusBarButtonClicked(_ sender: NSStatusBarButton) {
+        let isSettingsOpen = settingsWindow != nil && settingsWindow!.isVisible
+        
+        if let event = NSApp.currentEvent, event.type == .leftMouseUp && isSettingsOpen {
+            openSettings()
+        } else {
+            statusItem.menu = appMenu
+            statusItem.button?.performClick(nil)
+        }
+    }
+    
+    func menuDidClose(_ menu: NSMenu) {
+        statusItem.menu = nil
     }
     
     @objc func openSettings() {

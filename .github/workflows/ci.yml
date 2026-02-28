@@ -16,6 +16,13 @@ jobs:
     - name: Build Application
       run: make build
       
+    - name: Upload Build Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: VoiceOverlay
+        path: build/VoiceOverlay.zip
+        retention-days: 14
+      
     - name: Lint Documentation Links
       run: make lint-docs
       

@@ -86,7 +86,7 @@ class OverlayController: ObservableObject {
     func toggle() {
         if let panel = panel, panel.isVisible {
             if state == .recording {
-                // If recording, stop and transcribe instead of discarding
+                // If recording, stop and transcribe instantly
                 handleStop()
             } else {
                 hide()
@@ -101,6 +101,11 @@ class OverlayController: ObservableObject {
             }
             
             show(at: point)
+            
+            // Instantly start recording
+            if state == .idle {
+                handleTap()
+            }
         }
     }
     
@@ -155,14 +160,46 @@ class OverlayController: ObservableObject {
     private func transcribeAndInsert(fileUrl: URL) {
         // Determine transcriber
         let transcriber: TranscriptionService
-        if SettingsManager.shared.providerSelection == "remote" {
-            if let apiKey = SettingsManager.shared.getAPIKey(), !apiKey.isEmpty {
-                transcriber = RemoteTranscriptionService(apiKey: apiKey)
-            } else {
-                print("Remote provider selected but no API key found. Falling back to Mock.")
+        let settings = SettingsManager.shared
+        
+        if let activeId = settings.activeProviderId,
+           let config = settings.savedProviders.first(where: { $0.id == activeId }) {
+            
+            let apiKey = settings.getAPIKey(for: activeId) ?? ""
+            
+            // Allow mock to work without key. Other providers need one, unless custom logic applies.
+            if apiKey.isEmpty && config.type != "mock" {
+                Logger.shared.error("[\(config.name)] Selected but no API key found. Falling back to Mock.")
                 transcriber = MockTranscriptionService()
+            } else {
+                switch config.type {
+                case "openai":
+                    transcriber = OpenAITranscriptionService(apiKey: apiKey, model: config.model)
+                case "gemini":
+                    transcriber = GeminiTranscriptionService(apiKey: apiKey, model: config.model)
+                case "openrouter":
+                    transcriber = RemoteTranscriptionService(apiKey: apiKey, model: config.model, baseURL: "https://openrouter.ai/api/v1")
+                case "custom":
+                    let base = config.baseURL ?? "https://api.openai.com/v1"
+                    let cleanBase = base.hasSuffix("/chat/completions") ? base.replacingOccurrences(of: "/chat/completions", with: "") : base.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+                    transcriber = RemoteTranscriptionService(apiKey: apiKey, model: config.model, baseURL: cleanBase)
+                case "raif":
+                    transcriber = OpenAITranscriptionService(
+                        apiKey: apiKey,
+                        model: config.model,
+                        baseURL: "https://llm-api.cibaa.raiffeisen.ru/v1",
+                        prompt: config.prompt,
+                        language: config.language,
+                        speakerCount: config.speakerCount
+                    )
+                case "mock":
+                    transcriber = MockTranscriptionService()
+                default:
+                    transcriber = MockTranscriptionService()
+                }
             }
         } else {
+            Logger.shared.error("No active provider found. Falling back to Mock.")
             transcriber = MockTranscriptionService()
         }
         
@@ -170,7 +207,7 @@ class OverlayController: ObservableObject {
         Task {
             do {
                 let text = try await transcriber.transcribe(audioFileURL: fileUrl)
-                print("Transcription Context:\n\(text)")
+                Logger.shared.info("Transcription completed successfully. Length: \(text.count)")
                 
                 // Just copy to clipboard and notify
                 let pasteboard = NSPasteboard.general
@@ -181,7 +218,7 @@ class OverlayController: ObservableObject {
                     self.presentCompletionFeedback(title: "Voice Overlay", body: "Copied to clipboard")
                 }
             } catch {
-                print("Transcription failed: \(error)")
+                Logger.shared.error("Transcription failed: \(error.localizedDescription)")
                 await MainActor.run {
                     self.presentCompletionFeedback(title: "Transcription Error", body: error.localizedDescription)
                 }
@@ -193,7 +230,7 @@ class OverlayController: ObservableObject {
         let center = UNUserNotificationCenter.current()
         center.getNotificationSettings { [weak self] settings in
             guard let self = self else { return }
-            print("[Notifications] authorizationStatus=\(settings.authorizationStatus.rawValue), alertSetting=\(settings.alertSetting.rawValue), soundSetting=\(settings.soundSetting.rawValue)")
+            Logger.shared.info("[Notifications] authorizationStatus=\(settings.authorizationStatus.rawValue)")
             switch settings.authorizationStatus {
             case .authorized, .provisional, .ephemeral:
                 self.scheduleNotification(title: title, body: body)
@@ -234,9 +271,9 @@ class OverlayController: ObservableObject {
         let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: trigger)
         UNUserNotificationCenter.current().add(request) { error in
             if let error = error {
-                print("Failed to deliver notification: \(error)")
+                Logger.shared.error("Failed to deliver notification: \(error.localizedDescription)")
             } else {
-                print("[Notifications] Notification scheduled successfully")
+                Logger.shared.info("[Notifications] Notification scheduled successfully")
             }
         }
     }

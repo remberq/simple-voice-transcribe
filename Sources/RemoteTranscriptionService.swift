@@ -2,17 +2,28 @@ import Foundation
 
 class RemoteTranscriptionService: TranscriptionService {
     
-    private let apiURL = URL(string: "https://openrouter.ai/api/v1/chat/completions")!
-    private let model = "openai/gpt-4o-audio-preview"
+    private let apiURL: URL
+    private let model: String
     private let apiKey: String
+    private let logPrefix: String
     
-    init(apiKey: String) {
+    init(apiKey: String, model: String, baseURL: String) {
         self.apiKey = apiKey
+        self.model = model
+        
+        let urlStr = baseURL.hasSuffix("/chat/completions") ? baseURL : baseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/")) + "/chat/completions"
+        self.apiURL = URL(string: urlStr) ?? URL(string: "https://openrouter.ai/api/v1/chat/completions")!
+        
+        if self.apiURL.host?.contains("openrouter.ai") == true {
+            self.logPrefix = "[OpenRouter]"
+        } else {
+            self.logPrefix = "[CustomSTT]"
+        }
     }
     
     func transcribe(audioFileURL: URL) async throws -> String {
         let maskedKey = apiKey.count > 8 ? "\(apiKey.prefix(4))...\(apiKey.suffix(4))" : "***"
-        print("[OpenRouter] Using API key: \(maskedKey) (length: \(apiKey.count))")
+        print("\(logPrefix) Using API key: \(maskedKey) (length: \(apiKey.count))")
         
         guard apiKey.count > 5 else {
             throw TranscriptionError.missingAPIKey
@@ -30,7 +41,7 @@ class RemoteTranscriptionService: TranscriptionService {
             throw TranscriptionError.emptyAudio
         }
         
-        print("[OpenRouter] Audio file size: \(audioData.count) bytes")
+        print("\(logPrefix) Audio file size: \(audioData.count) bytes")
         
         let base64Audio = audioData.base64EncodedString()
         
@@ -70,13 +81,13 @@ class RemoteTranscriptionService: TranscriptionService {
         request.httpBody = jsonData
         request.timeoutInterval = 30
         
-        print("[OpenRouter] Sending transcription request to \(apiURL) with model \(model)...")
+        print("\(logPrefix) Sending transcription request to \(apiURL) with model \(model)...")
         
         let (data, response): (Data, URLResponse)
         do {
             (data, response) = try await URLSession.shared.data(for: request)
         } catch {
-            print("[OpenRouter] Network request failed: \(error)")
+            print("\(logPrefix) Network request failed: \(error)")
             throw TranscriptionError.networkError
         }
         
@@ -84,7 +95,7 @@ class RemoteTranscriptionService: TranscriptionService {
             throw TranscriptionError.networkError
         }
         
-        print("[OpenRouter] Response status: \(httpResponse.statusCode)")
+        print("\(logPrefix) Response status: \(httpResponse.statusCode)")
         
         if httpResponse.statusCode == 401 {
             throw TranscriptionError.apiError(message: "Unauthorized — check your OpenRouter API key.")
@@ -96,8 +107,8 @@ class RemoteTranscriptionService: TranscriptionService {
         
         guard httpResponse.statusCode == 200 else {
             let body = String(data: data, encoding: .utf8) ?? "No body"
-            print("[OpenRouter] Error response body: \(body)")
-            throw TranscriptionError.apiError(message: "OpenRouter returned HTTP \(httpResponse.statusCode): \(body)")
+            print("\(logPrefix) Error response body: \(body)")
+            throw TranscriptionError.apiError(message: "Server returned HTTP \(httpResponse.statusCode): \(body)")
         }
         
         // Parse the chat completion response
@@ -107,12 +118,12 @@ class RemoteTranscriptionService: TranscriptionService {
               let message = firstChoice["message"] as? [String: Any],
               let content = message["content"] as? String else {
             let body = String(data: data, encoding: .utf8) ?? "No body"
-            print("[OpenRouter] Unexpected response structure: \(body)")
+            print("\(logPrefix) Unexpected response structure: \(body)")
             throw TranscriptionError.processFailed
         }
         
         let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
-        print("[OpenRouter] Transcription result (\(trimmed.count) chars): \(trimmed.prefix(100))...")
+        print("\(logPrefix) Transcription result (\(trimmed.count) chars): \(trimmed.prefix(100))...")
         guard !trimmed.isEmpty else {
             throw TranscriptionError.processFailed
         }
