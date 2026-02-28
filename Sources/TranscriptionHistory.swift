@@ -3,7 +3,8 @@ import Combine
 import AppKit
 
 enum TranscriptionJobStatus: String, Codable {
-    case running
+    case uploading
+    case processing
     case completed
     case failed
     case cancelled
@@ -47,7 +48,7 @@ class TranscriptionHistoryManager: ObservableObject {
     private init() {}
     
     var activeJobsCount: Int {
-        jobs.filter { $0.status == .running }.count
+        jobs.filter { $0.status == .uploading || $0.status == .processing }.count
     }
     
     func addJob(id: UUID = UUID(), url: URL, providerName: String) -> TranscriptionJob {
@@ -61,7 +62,7 @@ class TranscriptionHistoryManager: ObservableObject {
             fileSize: Int64(size),
             fileFormat: format.isEmpty ? "AUDIO" : format,
             providerName: providerName,
-            status: .running
+            status: .uploading
         )
         
         DispatchQueue.main.async {
@@ -92,7 +93,7 @@ class TranscriptionHistoryManager: ObservableObject {
                 }
                 
                 // Active task management
-                if status != .running {
+                if status != .uploading && status != .processing {
                     self.activeTasks[id] = nil
                 }
             }

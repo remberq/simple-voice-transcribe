@@ -9,8 +9,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     var settingsWindow: NSWindow?
     var historyWindow: NSWindow?
     var mockMenuItem: NSMenuItem!
-    var delayMenuItem: NSMenuItem!
-    private var overlayStateCancellable: AnyCancellable?
+    private var historyCancellable: AnyCancellable?
     private var transcribingAnimationTimer: Timer?
     private var transcribingFrameIndex = 0
     
@@ -44,12 +43,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         menu.addItem(NSMenuItem(title: "Settings...", action: #selector(openSettings), keyEquivalent: ","))
         menu.addItem(NSMenuItem(title: "История транскрибаций", action: #selector(openHistory), keyEquivalent: "h"))
         menu.addItem(NSMenuItem.separator())
-        
-        mockMenuItem = NSMenuItem(title: SettingsManager.shared.mockModeEnabled ? "Выключить мок" : "Включить мок", action: #selector(toggleMockMode), keyEquivalent: "m")
+        mockMenuItem = NSMenuItem(title: SettingsManager.shared.mockModeEnabled ? "Выключить мок (с задержкой)" : "Включить мок (с задержкой)", action: #selector(toggleMockMode), keyEquivalent: "m")
         menu.addItem(mockMenuItem)
-        
-        delayMenuItem = NSMenuItem(title: SettingsManager.shared.delayModeEnabled ? "Выключить мок (с отправкой)" : "Включить мок (с отправкой)", action: #selector(toggleDelayMode), keyEquivalent: "d")
-        menu.addItem(delayMenuItem)
         menu.addItem(NSMenuItem.separator())
         
         menu.addItem(NSMenuItem(title: "Troubleshooting", action: #selector(openOpsDocs), keyEquivalent: "t"))
@@ -87,8 +82,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         }
         HotkeyManager.shared.registerHotkey()
         
-        // Reflect overlay runtime state in status bar icon.
-        observeOverlayState()
+        // Reflect history active jobs in status bar icon animation.
+        observeHistoryState()
     }
     
     @objc func toggleOverlay() {
@@ -163,12 +158,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     
     @objc func toggleMockMode() {
         SettingsManager.shared.mockModeEnabled.toggle()
-        mockMenuItem.title = SettingsManager.shared.mockModeEnabled ? "Выключить мок" : "Включить мок"
-    }
-    
-    @objc func toggleDelayMode() {
-        SettingsManager.shared.delayModeEnabled.toggle()
-        delayMenuItem.title = SettingsManager.shared.delayModeEnabled ? "Выключить мок (с отправкой)" : "Включить мок (с отправкой)"
+        mockMenuItem.title = SettingsManager.shared.mockModeEnabled ? "Выключить мок (с задержкой)" : "Включить мок (с задержкой)"
     }
     
     @objc func openOpsDocs() {
@@ -185,12 +175,15 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         OverlayController.shared.sendDebugNotification()
     }
 
-    private func observeOverlayState() {
-        overlayStateCancellable = OverlayController.shared.$state
+    private func observeHistoryState() {
+        historyCancellable = TranscriptionHistoryManager.shared.$jobs
             .receive(on: RunLoop.main)
-            .sink { [weak self] state in
+            .sink { [weak self] jobs in
                 guard let self = self else { return }
-                if state == .transcribing {
+                
+                let hasActiveJobs = jobs.contains(where: { $0.status == .uploading || $0.status == .processing })
+                
+                if hasActiveJobs {
                     self.startTranscribingStatusAnimation()
                 } else {
                     self.stopTranscribingStatusAnimation()

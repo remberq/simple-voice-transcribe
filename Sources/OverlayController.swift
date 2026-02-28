@@ -169,10 +169,7 @@ class OverlayController: ObservableObject {
         
         var providerName = "Unknown"
         
-        if settings.mockModeEnabled {
-            transcriber = MockTranscriptionService()
-            providerName = "Mock"
-        } else if let activeId = settings.activeProviderId,
+        if let activeId = settings.activeProviderId,
            let config = settings.savedProviders.first(where: { $0.id == activeId }) {
             
             providerName = config.name
@@ -220,8 +217,15 @@ class OverlayController: ObservableObject {
         // Kick off async transcription
         let task = Task {
             do {
-                if settings.delayModeEnabled && !settings.mockModeEnabled {
-                    // Try to mimic mock delay but actually send to provider
+                if settings.mockModeEnabled {
+                    // Simulate upload delay
+                    try await Task.sleep(nanoseconds: 5_000_000_000)
+                }
+                
+                manager.updateJob(id: job.id, status: .processing)
+                
+                if settings.mockModeEnabled {
+                    // Simulate processing delay
                     try await Task.sleep(nanoseconds: 5_000_000_000)
                 }
                 

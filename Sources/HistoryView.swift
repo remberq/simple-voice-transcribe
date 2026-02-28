@@ -84,12 +84,21 @@ struct HistoryRowView: View {
                         Text(job.errorMessage ?? "Ошибка транскрибации")
                             .font(.body)
                             .foregroundColor(.red)
-                    } else {
+                    } else if job.status == .uploading {
                         HStack(spacing: 6) {
                             ProgressView()
                                 .scaleEffect(0.5)
                                 .frame(width: 10, height: 10)
-                            Text("Обработка...")
+                            Text("Отправка файла...")
+                                .font(.body)
+                                .foregroundColor(.secondary)
+                        }
+                    } else if job.status == .processing {
+                        HStack(spacing: 6) {
+                            ProgressView()
+                                .scaleEffect(0.5)
+                                .frame(width: 10, height: 10)
+                            Text("Распознавание...")
                                 .font(.body)
                                 .foregroundColor(.secondary)
                         }
@@ -118,7 +127,7 @@ struct HistoryRowView: View {
                         }
                         .buttonStyle(.plain)
                         .help("Скопировать текст")
-                    } else if job.status == .running {
+                    } else if job.status == .uploading || job.status == .processing {
                         Button(action: {
                             manager.cancelJob(id: job.id)
                         }) {
