@@ -33,7 +33,7 @@ protocol TranscriptionService {
 class MockTranscriptionService: TranscriptionService {
     func transcribe(audioFileURL: URL) async throws -> String {
         // Deterministic delay for E2E testing
-        try await Task.sleep(nanoseconds: 1_500_000_000) // 1.5 seconds
+        try await Task.sleep(nanoseconds: 5_000_000_000) // 5.0 seconds
         
         // Ensure file exists (rough mimic of validation)
         let fileExists = FileManager.default.fileExists(atPath: audioFileURL.path)

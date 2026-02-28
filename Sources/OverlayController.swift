@@ -164,11 +164,15 @@ class OverlayController: ObservableObject {
     
     private func transcribeAndInsert(fileUrl: URL) {
         // Determine transcriber
-        let transcriber: TranscriptionService
+        var transcriber: TranscriptionService
         let settings = SettingsManager.shared
         
         var providerName = "Unknown"
-        if let activeId = settings.activeProviderId,
+        
+        if settings.mockModeEnabled {
+            transcriber = MockTranscriptionService()
+            providerName = "Mock"
+        } else if let activeId = settings.activeProviderId,
            let config = settings.savedProviders.first(where: { $0.id == activeId }) {
             
             providerName = config.name
