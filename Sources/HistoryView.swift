@@ -17,14 +17,24 @@ struct HistoryView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                List {
-                    ForEach(historyManager.jobs) { job in
-                        HistoryRowView(job: job)
-                            .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
-                            .listRowSeparator(.hidden)
+                ScrollViewReader { proxy in
+                    List {
+                        ForEach(historyManager.jobs) { job in
+                            HistoryRowView(job: job)
+                                .id(job.id) // Needed for scroll
+                                .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                                .listRowSeparator(.hidden)
+                        }
+                    }
+                    .listStyle(.plain)
+                    .onChange(of: historyManager.jobs.first?.id) { newId in
+                        if let id = newId {
+                            withAnimation {
+                                proxy.scrollTo(id, anchor: .top)
+                            }
+                        }
                     }
                 }
-                .listStyle(.plain)
             }
         }
         .frame(width: 450, height: 500)
