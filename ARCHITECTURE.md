@@ -9,9 +9,8 @@
 - `FocusAndInsertService`: interaction anchoring, focus safety checks, clipboard/paste insertion.
 - `PermissionsCoordinator`: microphone + accessibility checks and settings deep links.
 - `SettingsManager` + `SettingsView`: persisted settings and API key storage.
+- `TranscriptionHistoryManager` + `HistoryView`: tracks the state of transcription jobs (progress, completion, errors) across the application, with a dedicated UI for managing and retrying them.
 - `TranscriptionService` protocol:
-  - `MockTranscriptionService`
-  - `RemoteTranscriptionService` (OpenRouter HTTP)
 
 ## State Machine
 `idle -> recording -> transcribing -> idle`

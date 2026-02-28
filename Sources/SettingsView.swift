@@ -254,7 +254,7 @@ struct SettingsView: View {
                 }
                 .pickerStyle(.menu)
                 .disabled(editingProviderId != nil) // Cannot change type when editing
-                .onChange(of: newProviderType) { _ in
+                .onChangeCompat(of: newProviderType) { _ in
                     if editingProviderId == nil {
                         newAPIKey = ""
                         newProviderName = ""

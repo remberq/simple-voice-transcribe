@@ -17,4 +17,10 @@
 ## Error Paths
 - Missing microphone permission: overlay enters error state; second tap opens System Settings.
 - Remote provider selected without API key: transcription falls back to mock provider.
-- Remote API/network errors: user gets notification with failure reason.
+- Remote API/network errors: user gets notification with failure reason, and job is marked Failed in History.
+
+## Retry / History Flow
+1. User can open "Транскрибации" (History) from the system tray menu.
+2. The UI lists all pending, completed, and failed jobs.
+3. User can click "Повторить" on any failed or previous jobs to re-transcribe the cached audio seamlessly.
+4. User can click the "Copy" icon to retrieve previous results.

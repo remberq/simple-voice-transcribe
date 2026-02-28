@@ -27,7 +27,7 @@ struct HistoryView: View {
                         }
                     }
                     .listStyle(.plain)
-                    .onChange(of: historyManager.jobs.first?.id) { newId in
+                    .onChangeCompat(of: historyManager.jobs.first?.id) { newId in
                         if let id = newId {
                             withAnimation {
                                 proxy.scrollTo(id, anchor: .top)
@@ -57,7 +57,7 @@ struct HistoryRowView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .top) {
+            HStack(alignment: .center) {
                 // Info
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 6) {
@@ -82,33 +82,43 @@ struct HistoryRowView: View {
                             .foregroundColor(.secondary)
                     }
                     
-                    if job.status == .completed, let text = job.resultText {
-                        let displayText = text.count > 100 ? String(text.prefix(100)) + "..." : text
-                        Text(displayText)
+                    ZStack(alignment: .leading) {
+                        // Hidden placeholder to force consistent 2-line height
+                        Text("A\nB")
                             .font(.body)
-                            .lineLimit(2)
-                            .foregroundColor(.primary)
-                    } else if job.status == .failed || job.status == .cancelled {
-                        Text(job.errorMessage ?? "Ошибка транскрибации")
-                            .font(.body)
-                            .foregroundColor(.red)
-                    } else if job.status == .uploading {
-                        HStack(spacing: 6) {
-                            ProgressView()
-                                .scaleEffect(0.5)
-                                .frame(width: 10, height: 10)
-                            Text("Отправка файла...")
-                                .font(.body)
-                                .foregroundColor(.secondary)
-                        }
-                    } else if job.status == .processing {
-                        HStack(spacing: 6) {
-                            ProgressView()
-                                .scaleEffect(0.5)
-                                .frame(width: 10, height: 10)
-                            Text("Распознавание...")
-                                .font(.body)
-                                .foregroundColor(.secondary)
+                            .hidden()
+                        
+                        Group {
+                            if job.status == .completed, let text = job.resultText {
+                                let displayText = text.count > 100 ? String(text.prefix(100)) + "..." : text
+                                Text(displayText)
+                                    .font(.body)
+                                    .lineLimit(2)
+                                    .foregroundColor(.primary)
+                            } else if job.status == .failed || job.status == .cancelled {
+                                Text(job.errorMessage ?? "Ошибка транскрибации")
+                                    .font(.body)
+                                    .lineLimit(2)
+                                    .foregroundColor(.red)
+                            } else if job.status == .uploading {
+                                HStack(spacing: 6) {
+                                    ProgressView()
+                                        .scaleEffect(0.5)
+                                        .frame(width: 10, height: 10)
+                                    Text("Отправка файла...")
+                                        .font(.body)
+                                        .foregroundColor(.secondary)
+                                }
+                            } else if job.status == .processing {
+                                HStack(spacing: 6) {
+                                    ProgressView()
+                                        .scaleEffect(0.5)
+                                        .frame(width: 10, height: 10)
+                                    Text("Распознавание...")
+                                        .font(.body)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
                         }
                     }
                 }
@@ -123,6 +133,8 @@ struct HistoryRowView: View {
                                 let pb = NSPasteboard.general
                                 pb.clearContents()
                                 pb.setString(text, forType: .string)
+                                
+                                manager.copiedJobId = job.id
                                 
                                 justCopied = true
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
@@ -166,14 +178,13 @@ struct HistoryRowView: View {
                     .buttonStyle(.plain)
                     .help("Удалить")
                 }
-                .padding(.top, 4)
             }
         }
         .padding(12)
         .background(
             ZStack(alignment: .leading) {
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(Color(nsColor: .controlBackgroundColor))
+                    .fill(manager.copiedJobId == job.id ? Color.orange.opacity(0.15) : Color(nsColor: .controlBackgroundColor))
                 
                 if job.status == .uploading && job.uploadProgress > 0 {
                     GeometryReader { geo in
@@ -191,6 +202,8 @@ struct HistoryRowView: View {
                 let pb = NSPasteboard.general
                 pb.clearContents()
                 pb.setString(text, forType: .string)
+                
+                manager.copiedJobId = job.id
                 
                 justCopied = true
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2) {

@@ -272,6 +272,10 @@ class OverlayController: ObservableObject {
                 pasteboard.clearContents()
                 pasteboard.setString(text, forType: .string)
                 
+                DispatchQueue.main.async {
+                    manager.copiedJobId = job.id
+                }
+                
                 await MainActor.run {
                     self.presentCompletionFeedback(title: "Текст скопирован", body: "Транскрибация завершена успешно.", openHistory: true)
                 }

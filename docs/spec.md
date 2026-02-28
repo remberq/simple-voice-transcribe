@@ -9,10 +9,14 @@ Voice Overlay is a macOS menu-bar utility (`LSUIElement`) that records voice and
 3. Click mic to start recording.
 4. Click mic again, or press hotkey while recording, to stop and start transcription.
 5. App transcribes audio using selected provider:
+   - `mock` (development default)
+   - `openai` / `openrouter` / `custom` / `raif` (Raiffeisen, featuring custom prompts/languages)
+   - Customizable global hotkey through System Settings tab (default `Cmd+Shift+Space`)
    - `mock` (default)
    - `remote` (OpenRouter, requires API key in Keychain)
    - remote key storage mode: Keychain (persistent) or session-only (memory)
 6. Result handling:
+   - inserted in History window and Tray tooltip tracks live processing
    - optional clipboard copy (`alwaysCopy` setting)
    - optional insertion via simulated `Cmd+V` when focused element appears editable and frontmost app is unchanged
 7. Overlay hides after completion.

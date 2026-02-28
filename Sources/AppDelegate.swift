@@ -21,6 +21,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     ]
     
     func applicationDidFinishLaunching(_ aNotification: Notification) {
+        // Decrease tooltip delay so the tray icon tooltip shows up faster
+        UserDefaults.standard.set(100, forKey: "NSInitialToolTipDelay")
+        
         let notificationCenter = UNUserNotificationCenter.current()
         notificationCenter.delegate = self
         
@@ -185,9 +188,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
                 
                 if hasActiveJobs {
                     self.startTranscribingStatusAnimation()
+                    self.statusItem.button?.toolTip = "Идет обработка файла"
                 } else {
                     self.stopTranscribingStatusAnimation()
                     self.statusItem.button?.image = self.makeStatusSymbolImage(named: self.idleStatusSymbolName)
+                    self.statusItem.button?.toolTip = nil
                 }
             }
     }
@@ -212,8 +217,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     }
 
     private func makeStatusSymbolImage(named symbolName: String) -> NSImage? {
-        let image = NSImage(systemSymbolName: symbolName, accessibilityDescription: "Voice Overlay")
-            ?? NSImage(systemSymbolName: idleStatusSymbolName, accessibilityDescription: "Voice Overlay")
+        let config = NSImage.SymbolConfiguration(pointSize: 19, weight: .regular)
+        let image = NSImage(systemSymbolName: symbolName, accessibilityDescription: "Voice Overlay")?.withSymbolConfiguration(config)
+            ?? NSImage(systemSymbolName: idleStatusSymbolName, accessibilityDescription: "Voice Overlay")?.withSymbolConfiguration(config)
         image?.isTemplate = true
         return image
     }

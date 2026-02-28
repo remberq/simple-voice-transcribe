@@ -29,6 +29,14 @@ security delete-generic-password -s "com.anti.VoiceOverlay" -a "com.anti.VoiceOv
 6. Repeat in Slack/Chrome input.
 7. Repeat on non-editable surface (Finder desktop): verify no insertion.
 
+## Manual Verification (Settings & History)
+1. Open Settings -> Горячая клавиша. Change shortcut, verify it works.
+2. Perform a transcription, verify hovering over the system tray icon says "Идет обработка файла" promptly.
+3. Open "Транскрибации" window from tray.
+4. Verify previous transcription is listed. Click "Копировать", verify clipboard content.
+5. Create a failed transcription (e.g. invalid API key), click "Повторить".
+6. Click "Очистить" to remove all history.
+
 ## Permission Verification
 1. Remove microphone permission in System Settings.
 2. Trigger recording; verify error state and guidance behavior.
