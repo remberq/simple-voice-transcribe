@@ -19,7 +19,7 @@ class OpenAITranscriptionService: TranscriptionService {
         self.baseURL = URL(string: baseURL) ?? URL(string: "https://api.openai.com/v1")!
     }
     
-    func transcribe(audioFileURL: URL) async throws -> String {
+    func transcribe(audioFileURL: URL, onProgress: ((Double) -> Void)? = nil) async throws -> String {
         let maskedKey = apiKey.count > 8 ? "\(apiKey.prefix(4))...\(apiKey.suffix(4))" : "***"
         print("[OpenAI-STT] Using API key: \(maskedKey)")
         
@@ -93,14 +93,11 @@ class OpenAITranscriptionService: TranscriptionService {
         
         body.append("--\(boundary)--\r\n".data(using: .utf8)!)
         
-        request.httpBody = body
-        request.timeoutInterval = 60
-        
         print("[OpenAI-STT] Sending request to \(url) (model: \(model))...")
         
         let (data, response): (Data, URLResponse)
         do {
-            (data, response) = try await URLSession.shared.data(for: request)
+            (data, response) = try await AsyncUploadHelper.upload(request: request, data: body, onProgress: onProgress)
         } catch {
             throw TranscriptionError.networkError
         }

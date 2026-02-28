@@ -152,8 +152,19 @@ struct HistoryRowView: View {
         }
         .padding(12)
         .background(
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color(nsColor: .controlBackgroundColor))
+            ZStack(alignment: .leading) {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color(nsColor: .controlBackgroundColor))
+                
+                if job.status == .uploading && job.uploadProgress > 0 {
+                    GeometryReader { geo in
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color.blue.opacity(0.15))
+                            .frame(width: geo.size.width * CGFloat(job.uploadProgress))
+                            .animation(.linear(duration: 0.2), value: job.uploadProgress)
+                    }
+                }
+            }
         )
         // Click on the entire row to copy if completed
         .onTapGesture {

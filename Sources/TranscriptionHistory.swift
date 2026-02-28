@@ -18,6 +18,7 @@ struct TranscriptionJob: Identifiable, Codable {
     let providerName: String
     
     var status: TranscriptionJobStatus
+    var uploadProgress: Double = 0.0 // 0.0 to 1.0
     var resultText: String?
     var errorMessage: String?
     
@@ -96,6 +97,13 @@ class TranscriptionHistoryManager: ObservableObject {
                 if status != .uploading && status != .processing {
                     self.activeTasks[id] = nil
                 }
+            }
+        }
+    }
+    func updateJobProgress(id: UUID, progress: Double) {
+        DispatchQueue.main.async {
+            if let index = self.jobs.firstIndex(where: { $0.id == id }) {
+                self.jobs[index].uploadProgress = max(0.0, min(1.0, progress))
             }
         }
     }

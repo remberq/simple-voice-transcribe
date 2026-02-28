@@ -229,7 +229,9 @@ class OverlayController: ObservableObject {
                     try await Task.sleep(nanoseconds: 5_000_000_000)
                 }
                 
-                let text = try await transcriber.transcribe(audioFileURL: fileUrl)
+                let text = try await transcriber.transcribe(audioFileURL: fileUrl) { progress in
+                    manager.updateJobProgress(id: job.id, progress: progress)
+                }
                 // If cancelled while awating, exit gracefully
                 try Task.checkCancellation()
                 
