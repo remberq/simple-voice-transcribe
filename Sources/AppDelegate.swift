@@ -9,6 +9,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     var settingsWindow: NSWindow?
     var historyWindow: NSWindow?
     var mockMenuItem: NSMenuItem!
+    var delayMenuItem: NSMenuItem!
     private var overlayStateCancellable: AnyCancellable?
     private var transcribingAnimationTimer: Timer?
     private var transcribingFrameIndex = 0
@@ -46,6 +47,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         
         mockMenuItem = NSMenuItem(title: SettingsManager.shared.mockModeEnabled ? "Выключить мок" : "Включить мок", action: #selector(toggleMockMode), keyEquivalent: "m")
         menu.addItem(mockMenuItem)
+        
+        delayMenuItem = NSMenuItem(title: SettingsManager.shared.delayModeEnabled ? "Выключить мок (с отправкой)" : "Включить мок (с отправкой)", action: #selector(toggleDelayMode), keyEquivalent: "d")
+        menu.addItem(delayMenuItem)
         menu.addItem(NSMenuItem.separator())
         
         menu.addItem(NSMenuItem(title: "Troubleshooting", action: #selector(openOpsDocs), keyEquivalent: "t"))
@@ -160,6 +164,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     @objc func toggleMockMode() {
         SettingsManager.shared.mockModeEnabled.toggle()
         mockMenuItem.title = SettingsManager.shared.mockModeEnabled ? "Выключить мок" : "Включить мок"
+    }
+    
+    @objc func toggleDelayMode() {
+        SettingsManager.shared.delayModeEnabled.toggle()
+        delayMenuItem.title = SettingsManager.shared.delayModeEnabled ? "Выключить мок (с отправкой)" : "Включить мок (с отправкой)"
     }
     
     @objc func openOpsDocs() {
