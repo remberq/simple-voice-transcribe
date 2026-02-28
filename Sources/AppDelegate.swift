@@ -7,6 +7,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     var statusItem: NSStatusItem!
     var appMenu: NSMenu!
     var settingsWindow: NSWindow?
+    var historyWindow: NSWindow?
     private var overlayStateCancellable: AnyCancellable?
     private var transcribingAnimationTimer: Timer?
     private var transcribingFrameIndex = 0
@@ -38,6 +39,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         let menu = NSMenu()
         menu.addItem(NSMenuItem(title: "Toggle Overlay (Debug)", action: #selector(toggleOverlay), keyEquivalent: "o"))
         menu.addItem(NSMenuItem(title: "Settings...", action: #selector(openSettings), keyEquivalent: ","))
+        menu.addItem(NSMenuItem(title: "История транскрибаций", action: #selector(openHistory), keyEquivalent: "h"))
         menu.addItem(NSMenuItem(title: "Test Notification", action: #selector(testNotification), keyEquivalent: "n"))
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "Troubleshooting", action: #selector(openOpsDocs), keyEquivalent: "t"))
@@ -85,9 +87,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     
     @objc func statusBarButtonClicked(_ sender: NSStatusBarButton) {
         let isSettingsOpen = settingsWindow != nil && settingsWindow!.isVisible
+        let isHistoryOpen = historyWindow != nil && historyWindow!.isVisible
         
-        if let event = NSApp.currentEvent, event.type == .leftMouseUp && isSettingsOpen {
-            openSettings()
+        if let event = NSApp.currentEvent, event.type == .leftMouseUp && (isSettingsOpen || isHistoryOpen) {
+            // Bring the latest one to front, or both if needed
+            NSApp.activate(ignoringOtherApps: true)
+            if isSettingsOpen { settingsWindow?.makeKeyAndOrderFront(nil) }
+            if isHistoryOpen { historyWindow?.makeKeyAndOrderFront(nil) }
         } else {
             statusItem.menu = appMenu
             statusItem.button?.performClick(nil)
@@ -120,6 +126,29 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         // Critical: Force the app and window to the foreground despite LSUIElement
         NSApp.activate(ignoringOtherApps: true)
         settingsWindow?.makeKeyAndOrderFront(nil)
+    }
+    
+    @objc func openHistory() {
+        if historyWindow == nil {
+            let view = HistoryView()
+            let hostingController = NSHostingController(rootView: view)
+            
+            let window = NSWindow(
+                contentRect: NSRect(x: 0, y: 0, width: 450, height: 500),
+                styleMask: [.titled, .closable, .miniaturizable, .resizable],
+                backing: .buffered,
+                defer: false
+            )
+            window.title = "История транскрибаций"
+            window.center()
+            window.contentView = hostingController.view
+            window.isReleasedWhenClosed = false
+            
+            self.historyWindow = window
+        }
+        
+        NSApp.activate(ignoringOtherApps: true)
+        historyWindow?.makeKeyAndOrderFront(nil)
     }
     
     @objc func openOpsDocs() {
@@ -182,5 +211,19 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
         completionHandler([.list, .banner, .sound])
+    }
+    
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping () -> Void
+    ) {
+        let userInfo = response.notification.request.content.userInfo
+        if let action = userInfo["action"] as? String, action == "openHistory" {
+            DispatchQueue.main.async {
+                self.openHistory()
+            }
+        }
+        completionHandler()
     }
 }
