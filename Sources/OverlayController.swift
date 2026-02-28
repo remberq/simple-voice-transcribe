@@ -183,8 +183,9 @@ class OverlayController: ObservableObject {
         let manager = TranscriptionHistoryManager.shared
         manager.resetJob(id: id)
         
-        // Brief delay ensures UI publishes the reset before Task spins up
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+        // Wait long enough for the previous Task cancellation to settle 
+        // and the main thread reset to propagate.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
             if let job = manager.jobs.first(where: { $0.id == id }) {
                 self.executeTranscription(for: job)
             }
