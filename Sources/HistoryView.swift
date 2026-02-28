@@ -36,6 +36,14 @@ struct HistoryView: View {
                     }
                 }
             }
+            
+            // Hidden button to close window on Escape
+            Button("") {
+                NSApp.keyWindow?.close()
+            }
+            .keyboardShortcut(.cancelAction)
+            .opacity(0)
+            .frame(width: 0, height: 0)
         }
         .frame(width: 450, height: 500)
         .background(Color(nsColor: .windowBackgroundColor))
@@ -136,6 +144,17 @@ struct HistoryRowView: View {
                         }
                         .buttonStyle(.plain)
                         .help("Отменить")
+                    }
+                    
+                    if job.status == .failed || job.status == .cancelled || job.status == .completed {
+                        Button(action: {
+                            OverlayController.shared.retryTranscription(id: job.id)
+                        }) {
+                            Image(systemName: "arrow.clockwise")
+                                .foregroundColor(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                        .help("Повторить транскрибацию")
                     }
                     
                     Button(action: {

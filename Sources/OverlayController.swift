@@ -163,21 +163,45 @@ class OverlayController: ObservableObject {
     }
     
     private func transcribeAndInsert(fileUrl: URL) {
+        let settings = SettingsManager.shared
+        
+        var providerName = "Unknown"
+        if let activeId = settings.activeProviderId,
+           let config = settings.savedProviders.first(where: { $0.id == activeId }) {
+            providerName = config.name
+        } else if settings.mockModeEnabled {
+            providerName = "Mock"
+        }
+        
+        let manager = TranscriptionHistoryManager.shared
+        let job = manager.addJob(url: fileUrl, providerName: providerName)
+        
+        executeTranscription(for: job)
+    }
+    
+    func retryTranscription(id: UUID) {
+        let manager = TranscriptionHistoryManager.shared
+        manager.resetJob(id: id)
+        
+        // Brief delay ensures UI publishes the reset before Task spins up
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            if let job = manager.jobs.first(where: { $0.id == id }) {
+                self.executeTranscription(for: job)
+            }
+        }
+    }
+    
+    private func executeTranscription(for job: TranscriptionJob) {
         // Determine transcriber
         var transcriber: TranscriptionService
         let settings = SettingsManager.shared
         
-        var providerName = "Unknown"
-        
         if let activeId = settings.activeProviderId,
            let config = settings.savedProviders.first(where: { $0.id == activeId }) {
             
-            providerName = config.name
             let apiKey = settings.getAPIKey(for: activeId) ?? ""
             
-            // Allow mock to work without key. Other providers need one, unless custom logic applies.
             if apiKey.isEmpty && config.type != "mock" {
-                Logger.shared.error("[\(config.name)] Selected but no API key found. Falling back to Mock.")
                 transcriber = MockTranscriptionService()
             } else {
                 switch config.type {
@@ -207,12 +231,11 @@ class OverlayController: ObservableObject {
                 }
             }
         } else {
-            Logger.shared.error("No active provider found. Falling back to Mock.")
             transcriber = MockTranscriptionService()
         }
         
         let manager = TranscriptionHistoryManager.shared
-        let job = manager.addJob(url: fileUrl, providerName: providerName)
+        let fileUrl = job.fileURL
         
         // Kick off async transcription
         let task = Task {
