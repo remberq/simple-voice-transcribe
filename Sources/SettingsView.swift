@@ -2,16 +2,16 @@ import SwiftUI
 import AppKit
 
 enum SettingsTab: String, CaseIterable, Identifiable {
-    case hotkey = "Горячая клавиша"
     case transcription = "Транскрибация"
+    case hotkey = "Горячая клавиша"
     case system = "Система"
     
     var id: String { rawValue }
     
     var icon: String {
         switch self {
-        case .hotkey: return "keyboard"
         case .transcription: return "waveform"
+        case .hotkey: return "keyboard"
         case .system: return "gearshape"
         }
     }
@@ -19,10 +19,11 @@ enum SettingsTab: String, CaseIterable, Identifiable {
 
 struct SettingsView: View {
     @ObservedObject var settings = SettingsManager.shared
-    @State private var selectedTab: SettingsTab = .hotkey
+    @State private var selectedTab: SettingsTab = .transcription
     
     // MARK: - Add Provider Form State
     @State private var isAddingProvider = false
+    @State private var editingProviderId: UUID? = nil
     @State private var newProviderType: String = "openai"
     @State private var newProviderName: String = ""
     @State private var newAPIKey: String = ""
@@ -156,17 +157,25 @@ struct SettingsView: View {
     
     private func providerRow(_ provider: ProviderConfig) -> some View {
         HStack {
-            Image(systemName: providerIcon(for: provider.type))
-                .foregroundColor(.accentColor)
-                .frame(width: 24)
-            
-            VStack(alignment: .leading, spacing: 2) {
-                Text(provider.name)
-                    .font(.subheadline).bold()
-                Text("Модель: \(provider.model)")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+            Button(action: {
+                startEditing(provider)
+            }) {
+                HStack(spacing: 8) {
+                    Image(systemName: providerIcon(for: provider.type))
+                        .foregroundColor(.accentColor)
+                        .frame(width: 24)
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(provider.name)
+                            .font(.subheadline).bold()
+                        Text("Модель: \(provider.model)")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
             
             Spacer()
             
@@ -202,7 +211,14 @@ struct SettingsView: View {
         }
         .padding(10)
         .background(RoundedRectangle(cornerRadius: 8).fill(Color(NSColor.controlBackgroundColor)))
-        .overlay(RoundedRectangle(cornerRadius: 8).stroke(settings.activeProviderId == provider.id ? Color.green : Color.clear, lineWidth: 1))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(
+                    editingProviderId == provider.id ? Color.blue :
+                        (settings.activeProviderId == provider.id ? Color.green : Color.clear),
+                    lineWidth: (editingProviderId == provider.id || settings.activeProviderId == provider.id) ? 1.5 : 1
+                )
+        )
     }
     
     // MARK: Add Provider form
@@ -211,9 +227,12 @@ struct SettingsView: View {
             Divider()
             
             HStack {
-                Text("Новый провайдер").font(.headline)
+                Text(editingProviderId == nil ? "Новый провайдер" : "Редактирование провайдера").font(.headline)
                 Spacer()
-                Button("Отмена") { isAddingProvider = false }
+                Button("Отмена") {
+                    isAddingProvider = false
+                    editingProviderId = nil
+                }
             }
             
             HStack {
@@ -226,13 +245,16 @@ struct SettingsView: View {
                     // Text("Свой (Custom OpenAI)").tag("custom") // Hidden per user request
                 }
                 .pickerStyle(.menu)
+                .disabled(editingProviderId != nil) // Cannot change type when editing
                 .onChange(of: newProviderType) { _ in
-                    newAPIKey = ""
-                    newProviderName = ""
-                    newCustomBaseURL = ""
-                    resetFetchState()
-                    formError = nil
-                    connectionTestResult = ""
+                    if editingProviderId == nil {
+                        newAPIKey = ""
+                        newProviderName = ""
+                        newCustomBaseURL = ""
+                        resetFetchState()
+                        formError = nil
+                        connectionTestResult = ""
+                    }
                 }
             }
             
@@ -367,7 +389,7 @@ struct SettingsView: View {
                     .padding(.top, 4)
             }
             
-            Button("Добавить") {
+            Button(editingProviderId == nil ? "Добавить" : "Обновить") {
                 validateAndAdd()
             }
             .buttonStyle(.borderedProminent)
@@ -377,7 +399,30 @@ struct SettingsView: View {
         .background(RoundedRectangle(cornerRadius: 8).stroke(Color.gray.opacity(0.3), lineWidth: 1))
     }
     
+    private func startEditing(_ provider: ProviderConfig) {
+        editingProviderId = provider.id
+        newProviderType = provider.type
+        newProviderName = provider.name
+        newCustomBaseURL = provider.baseURL ?? ""
+        newSelectedModel = provider.model
+        newPrompt = provider.prompt ?? ""
+        newLanguage = provider.language ?? "ru"
+        newSpeakerCount = provider.speakerCount ?? ""
+        newAPIKey = settings.getAPIKey(for: provider.id) ?? ""
+        
+        fetchedModels = [FetchedModel(id: provider.model, isFree: false)]
+        
+        formError = nil
+        connectionTestResult = ""
+        isAddingProvider = true
+        
+        if provider.type != "raif" {
+            fetchModels()
+        }
+    }
+    
     private func resetForm() {
+        editingProviderId = nil
         newProviderType = "openai"
         newProviderName = ""
         newAPIKey = ""
@@ -443,7 +488,7 @@ struct SettingsView: View {
         }
         
         let config = ProviderConfig(
-            id: UUID(),
+            id: editingProviderId ?? UUID(),
             type: newProviderType,
             name: providerName,
             baseURL: newProviderType == "custom" ? newCustomBaseURL : nil,
@@ -509,10 +554,14 @@ struct SettingsView: View {
                     if let httpResponse = response as? HTTPURLResponse {
                         if httpResponse.statusCode == 200 {
                             self.connectionTestSuccess = true
-                            self.connectionTestResult = "Успешное подключение! Провайдер добавлен."
+                            self.connectionTestResult = self.editingProviderId == nil ? "Успешное подключение! Провайдер добавлен." : "Успешное подключение! Провайдер обновлен."
                             
                             // Success -> Save
-                            self.settings.savedProviders.append(config)
+                            if let index = self.settings.savedProviders.firstIndex(where: { $0.id == config.id }) {
+                                self.settings.savedProviders[index] = config
+                            } else {
+                                self.settings.savedProviders.append(config)
+                            }
                             self.settings.setAPIKey(apiKey, for: config.id)
                             
                             if self.settings.activeProviderId == nil {
@@ -521,16 +570,21 @@ struct SettingsView: View {
                             
                             DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
                                 self.isAddingProvider = false
+                                self.editingProviderId = nil
                             }
                             
                         // For Raiffeisen, 400 or 422 means Auth was completely fine, but payload was missing text, which is what we did on an empty POST test.
                         // FastAPI/Pydantic returns 422 Unprocessable Entity for missing form-data.
                         } else if config.type == "raif" && (httpResponse.statusCode == 400 || httpResponse.statusCode == 422) {
                             self.connectionTestSuccess = true
-                            self.connectionTestResult = "Успешное подключение! Провайдер добавлен."
+                            self.connectionTestResult = self.editingProviderId == nil ? "Успешное подключение! Провайдер добавлен." : "Успешное подключение! Провайдер обновлен."
                             
                             // Success -> Save
-                            self.settings.savedProviders.append(config)
+                            if let index = self.settings.savedProviders.firstIndex(where: { $0.id == config.id }) {
+                                self.settings.savedProviders[index] = config
+                            } else {
+                                self.settings.savedProviders.append(config)
+                            }
                             self.settings.setAPIKey(apiKey, for: config.id)
                             
                             if self.settings.activeProviderId == nil {
@@ -540,6 +594,7 @@ struct SettingsView: View {
                             // Delayed close
                             DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
                                 self.isAddingProvider = false
+                                self.editingProviderId = nil
                             }
                         } else if httpResponse.statusCode == 401 || httpResponse.statusCode == 400 {
                             self.formError = "Ошибка соединения: Неверный API ключ"
