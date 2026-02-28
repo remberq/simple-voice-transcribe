@@ -10,7 +10,7 @@ class GeminiTranscriptionService: TranscriptionService {
         self.model = model
     }
     
-    func transcribe(audioFileURL: URL) async throws -> String {
+    func transcribe(audioFileURL: URL, onProgress: ((Double) -> Void)? = nil) async throws -> String {
         let maskedKey = apiKey.count > 8 ? "\(apiKey.prefix(4))...\(apiKey.suffix(4))" : "***"
         print("[Gemini-STT] Using API key: \(maskedKey)")
         
@@ -66,14 +66,11 @@ class GeminiTranscriptionService: TranscriptionService {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = jsonData
-        request.timeoutInterval = 45
-        
         print("[Gemini-STT] Sending request to \(model)...")
         
         let (data, response): (Data, URLResponse)
         do {
-            (data, response) = try await URLSession.shared.data(for: request)
+            (data, response) = try await AsyncUploadHelper.upload(request: request, data: jsonData, onProgress: onProgress)
         } catch {
             throw TranscriptionError.networkError
         }

@@ -21,7 +21,7 @@ class RemoteTranscriptionService: TranscriptionService {
         }
     }
     
-    func transcribe(audioFileURL: URL) async throws -> String {
+    func transcribe(audioFileURL: URL, onProgress: ((Double) -> Void)? = nil) async throws -> String {
         let maskedKey = apiKey.count > 8 ? "\(apiKey.prefix(4))...\(apiKey.suffix(4))" : "***"
         print("\(logPrefix) Using API key: \(maskedKey) (length: \(apiKey.count))")
         
@@ -78,14 +78,11 @@ class RemoteTranscriptionService: TranscriptionService {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("VoiceOverlay/1.0", forHTTPHeaderField: "HTTP-Referer")
         request.setValue("Voice Overlay macOS App", forHTTPHeaderField: "X-Title")
-        request.httpBody = jsonData
-        request.timeoutInterval = 30
-        
         print("\(logPrefix) Sending transcription request to \(apiURL) with model \(model)...")
         
         let (data, response): (Data, URLResponse)
         do {
-            (data, response) = try await URLSession.shared.data(for: request)
+            (data, response) = try await AsyncUploadHelper.upload(request: request, data: jsonData, onProgress: onProgress)
         } catch {
             print("\(logPrefix) Network request failed: \(error)")
             throw TranscriptionError.networkError

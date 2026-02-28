@@ -27,11 +27,11 @@ enum TranscriptionError: Error, LocalizedError {
 }
 
 protocol TranscriptionService {
-    func transcribe(audioFileURL: URL) async throws -> String
+    func transcribe(audioFileURL: URL, onProgress: ((Double) -> Void)?) async throws -> String
 }
 
 class MockTranscriptionService: TranscriptionService {
-    func transcribe(audioFileURL: URL) async throws -> String {
+    func transcribe(audioFileURL: URL, onProgress: ((Double) -> Void)? = nil) async throws -> String {
         // Deterministic delay for E2E testing
         try await Task.sleep(nanoseconds: 5_000_000_000) // 5.0 seconds
         
