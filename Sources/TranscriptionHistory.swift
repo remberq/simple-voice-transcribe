@@ -111,8 +111,13 @@ class TranscriptionHistoryManager: ObservableObject {
     }
     
     func resetJob(id: UUID) {
+        // Cancel the task without updating the status to .cancelled
+        if let task = activeTasks[id] {
+            task.cancel()
+            activeTasks[id] = nil
+        }
+        
         DispatchQueue.main.async {
-            self.cancelJob(id: id)
             if let index = self.jobs.firstIndex(where: { $0.id == id }) {
                 self.jobs[index].status = .uploading
                 self.jobs[index].uploadProgress = 0.0
@@ -127,7 +132,6 @@ class TranscriptionHistoryManager: ObservableObject {
     }
     
     func cancelJob(id: UUID) {
-        // Find the active task and cancel it
         if let task = activeTasks[id] {
             task.cancel()
             activeTasks[id] = nil
