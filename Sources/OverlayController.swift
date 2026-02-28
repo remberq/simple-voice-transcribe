@@ -220,6 +220,11 @@ class OverlayController: ObservableObject {
         // Kick off async transcription
         let task = Task {
             do {
+                if settings.delayModeEnabled && !settings.mockModeEnabled {
+                    // Try to mimic mock delay but actually send to provider
+                    try await Task.sleep(nanoseconds: 5_000_000_000)
+                }
+                
                 let text = try await transcriber.transcribe(audioFileURL: fileUrl)
                 // If cancelled while awating, exit gracefully
                 try Task.checkCancellation()
