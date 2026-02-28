@@ -1,6 +1,8 @@
 import AppKit
 
+#if !TESTING
 @main
+#endif
 struct VoiceOverlayApp {
     static func main() {
         let app = NSApplication.shared
