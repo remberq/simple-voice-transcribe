@@ -6,6 +6,7 @@ enum OverlayState {
     case paused
     case transcribing
     case error
+    case fileUpload
 }
 
 struct OverlayView: View {

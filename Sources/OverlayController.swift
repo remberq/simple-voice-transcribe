@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 import UserNotifications
+import UniformTypeIdentifiers
 
 class OverlayController: ObservableObject {
     static let shared = OverlayController()
@@ -109,6 +110,23 @@ class OverlayController: ObservableObject {
         }
     }
     
+    func toggleFileUpload() {
+        if let panel = panel, panel.isVisible, state == .fileUpload {
+            hide()
+        } else {
+            let mouseLoc = NSEvent.mouseLocation
+            var point = CGPoint(x: mouseLoc.x + 24, y: mouseLoc.y - 24)
+            
+            if let screen = NSScreen.main {
+               point.x = max(screen.visibleFrame.minX + 12, min(point.x, screen.visibleFrame.maxX - 92))
+               point.y = max(screen.visibleFrame.minY + 12, min(point.y, screen.visibleFrame.maxY - 92))
+            }
+            
+            state = .fileUpload
+            show(at: point)
+        }
+    }
+    
     // MARK: - Interactions
     
     func handleTap() {
@@ -132,6 +150,43 @@ class OverlayController: ObservableObject {
             hide()
         case .transcribing:
             // Dismiss on tap
+            state = .idle
+            hide()
+        case .fileUpload:
+            // Dismiss file upload overlay on tap
+            state = .idle
+            hide()
+        }
+    }
+    
+    func handleFileUploadTap() {
+        guard state == .fileUpload else { return }
+        
+        // Hide overlay while file picker is open
+        panel?.orderOut(nil)
+        
+        let openPanel = NSOpenPanel()
+        openPanel.title = "Выберите аудио файл"
+        openPanel.allowedContentTypes = AudioMIMEHelper.allowedContentTypes
+        openPanel.allowsMultipleSelection = false
+        openPanel.canChooseDirectories = false
+        openPanel.canChooseFiles = true
+        
+        let response = openPanel.runModal()
+        
+        if response == .OK, let fileUrl = openPanel.url {
+            // Validate file size
+            if let error = AudioMIMEHelper.validateFileSize(at: fileUrl) {
+                state = .idle
+                presentCompletionFeedback(title: "Ошибка", body: error, openHistory: false)
+                return
+            }
+            
+            state = .idle
+            hide()
+            transcribeAndInsert(fileUrl: fileUrl)
+        } else {
+            // User cancelled — restore overlay briefly, then hide
             state = .idle
             hide()
         }
@@ -175,6 +230,8 @@ class OverlayController: ObservableObject {
         
         let manager = TranscriptionHistoryManager.shared
         let job = manager.addJob(url: fileUrl, providerName: providerName)
+        
+        presentCompletionFeedback(title: "Файл загружается", body: "Нажмите, чтобы открыть историю", openHistory: true)
         
         executeTranscription(for: job)
     }

@@ -30,7 +30,7 @@ class GeminiTranscriptionService: TranscriptionService {
         }
         
         let base64Audio = audioData.base64EncodedString()
-        let mimeType = "audio/wav" // Depending on AVAudioRecorder settings
+        let mimeType = AudioMIMEHelper.mimeType(for: audioFileURL.pathExtension)
         
         // Build the URL: https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=...
         guard let url = URL(string: "\(baseURL)/\(model):generateContent?key=\(apiKey)") else {
