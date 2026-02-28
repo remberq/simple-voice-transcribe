@@ -47,7 +47,7 @@ clean:
 
 test:
 	@echo "=> Running tests..."
-	@swift test
+	@swift test -Xswiftc -DTESTING
 
 lint-docs:
 	@echo "=> Linting documentation..."
