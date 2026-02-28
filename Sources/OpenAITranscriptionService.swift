@@ -83,7 +83,7 @@ class OpenAITranscriptionService: TranscriptionService {
         
         // Add file parameter
         let filename = audioFileURL.lastPathComponent
-        let mimeType = "audio/wav" // Adjust if we record in m4a/aac
+        let mimeType = AudioMIMEHelper.mimeType(for: audioFileURL.pathExtension)
         
         body.append("--\(boundary)\r\n".data(using: .utf8)!)
         body.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(filename)\"\r\n".data(using: .utf8)!)

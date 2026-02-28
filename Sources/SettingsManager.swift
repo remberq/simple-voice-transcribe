@@ -24,6 +24,8 @@ class SettingsManager: ObservableObject {
     // Core UserDefaults Keys
     private let kHotkeyKeyCode = "hotkeyKeyCode"
     private let kHotkeyModifiers = "hotkeyModifiers"
+    private let kFileUploadHotkeyKeyCode = "fileUploadHotkeyKeyCode"
+    private let kFileUploadHotkeyModifiers = "fileUploadHotkeyModifiers"
     private let kSavedProviders = "savedProviders"
     private let kActiveProviderId = "activeProviderId"
     private let kStoreAPIKeyInKeychain = "storeAPIKeyInKeychain"
@@ -44,6 +46,14 @@ class SettingsManager: ObservableObject {
     
     @Published var hotkeyModifiers: Int {
         didSet { UserDefaults.standard.set(hotkeyModifiers, forKey: kHotkeyModifiers) }
+    }
+    
+    @Published var fileUploadHotkeyKeyCode: Int {
+        didSet { UserDefaults.standard.set(fileUploadHotkeyKeyCode, forKey: kFileUploadHotkeyKeyCode) }
+    }
+    
+    @Published var fileUploadHotkeyModifiers: Int {
+        didSet { UserDefaults.standard.set(fileUploadHotkeyModifiers, forKey: kFileUploadHotkeyModifiers) }
     }
     
 
@@ -83,12 +93,16 @@ class SettingsManager: ObservableObject {
         defaults.register(defaults: [
             kHotkeyKeyCode: 49,
             kHotkeyModifiers: 768,
+            kFileUploadHotkeyKeyCode: 2, // D key
+            kFileUploadHotkeyModifiers: 768, // Cmd+Shift
             kStoreAPIKeyInKeychain: true,
             kMockModeEnabled: false
         ])
         
         self.hotkeyKeyCode = defaults.integer(forKey: kHotkeyKeyCode)
         self.hotkeyModifiers = defaults.integer(forKey: kHotkeyModifiers)
+        self.fileUploadHotkeyKeyCode = defaults.integer(forKey: kFileUploadHotkeyKeyCode)
+        self.fileUploadHotkeyModifiers = defaults.integer(forKey: kFileUploadHotkeyModifiers)
         
         if let data = defaults.data(forKey: kSavedProviders),
            let decoded = try? JSONDecoder().decode([ProviderConfig].self, from: data) {

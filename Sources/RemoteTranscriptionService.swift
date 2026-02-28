@@ -60,7 +60,7 @@ class RemoteTranscriptionService: TranscriptionService {
                             "type": "input_audio",
                             "input_audio": [
                                 "data": base64Audio,
-                                "format": "wav"
+                                "format": AudioMIMEHelper.audioFormat(for: audioFileURL.pathExtension)
                             ]
                         ]
                     ]
