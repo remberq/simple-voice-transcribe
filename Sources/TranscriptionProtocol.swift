@@ -41,6 +41,11 @@ class MockTranscriptionService: TranscriptionService {
             throw TranscriptionError.emptyAudio
         }
         
-        return "This is a mocked transcription result."
+        let length = Int.random(in: 10...300)
+        let baseText = "Это моковый текст для тестирования интерфейса истории транскрибаций. Он генерируется случайной длины, чтобы проверить, как приложение обрезает длинные строки и отображает их на экране. "
+        let repeatedText = String(repeating: baseText, count: (length / baseText.count) + 1)
+        let randomText = String(repeatedText.prefix(length))
+        
+        return randomText
     }
 }

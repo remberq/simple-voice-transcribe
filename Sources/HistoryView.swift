@@ -65,7 +65,8 @@ struct HistoryRowView: View {
                     }
                     
                     if job.status == .completed, let text = job.resultText {
-                        Text(text)
+                        let displayText = text.count > 100 ? String(text.prefix(100)) + "..." : text
+                        Text(displayText)
                             .font(.body)
                             .lineLimit(2)
                             .foregroundColor(.primary)
