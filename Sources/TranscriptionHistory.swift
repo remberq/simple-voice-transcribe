@@ -39,10 +39,11 @@ struct TranscriptionJob: Identifiable, Codable {
     }
 }
 
-class TranscriptionHistoryManager: ObservableObject {
+final class TranscriptionHistoryManager: ObservableObject, @unchecked Sendable {
     static let shared = TranscriptionHistoryManager()
     
     @Published var jobs: [TranscriptionJob] = []
+    @Published var copiedJobId: UUID? = nil
     
     // Keep track of ongoing task handles if we want to support cancellation
     private var activeTasks: [UUID: Task<Void, Never>] = [:]

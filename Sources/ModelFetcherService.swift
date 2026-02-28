@@ -99,7 +99,7 @@ class ModelFetcherService {
     
     private static func fetchGeminiModels(apiKey: String) async throws -> [FetchedModel] {
         guard let url = URL(string: "https://generativelanguage.googleapis.com/v1beta/models?key=\(apiKey)") else { throw FetchError.invalidURL }
-        var request = URLRequest(url: url)
+        let request = URLRequest(url: url)
         
         let (data, response) = try await URLSession.shared.data(for: request)
         guard (response as? HTTPURLResponse)?.statusCode == 200 else { throw FetchError.invalidResponse }

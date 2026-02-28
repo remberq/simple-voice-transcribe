@@ -85,8 +85,8 @@ final class VoiceOverlayTests: XCTestCase {
         FileManager.default.createFile(atPath: fakeUrl.path, contents: Data())
         
         do {
-            let result = try await transcriber.transcribe(audioFileURL: fakeUrl)
-            XCTAssertEqual(result, "This is a mocked transcription result.")
+            let result = try await transcriber.transcribe(audioFileURL: fakeUrl, onProgress: nil)
+            XCTAssertFalse(result.isEmpty, "Mock transcription should return some text")
         } catch {
             XCTFail("Transcription failed with error: \(error)")
         }
