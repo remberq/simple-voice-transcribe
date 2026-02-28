@@ -218,8 +218,12 @@ class OverlayController: ObservableObject {
         let task = Task {
             do {
                 if settings.mockModeEnabled {
-                    // Simulate upload delay
-                    try await Task.sleep(nanoseconds: 5_000_000_000)
+                    // Simulate upload delay with progress
+                    let steps = 10
+                    for i in 1...steps {
+                        try await Task.sleep(nanoseconds: 500_000_000) // 0.5s
+                        manager.updateJobProgress(id: job.id, progress: Double(i) / Double(steps))
+                    }
                 }
                 
                 manager.updateJob(id: job.id, status: .processing)
