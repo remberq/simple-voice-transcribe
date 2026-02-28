@@ -37,6 +37,16 @@ security delete-generic-password -s "com.anti.VoiceOverlay" -a "com.anti.VoiceOv
 5. Create a failed transcription (e.g. invalid API key), click "Повторить".
 6. Click "Очистить" to remove all history.
 
+## Manual Verification (File Upload)
+1. Press `Cmd+Shift+D` → verify green overlay with file icon appears.
+2. Click icon → verify file picker opens, shows only audio files.
+3. Select an `.m4a` file → verify "Файл загружается" notification appears.
+4. Wait for transcription → verify result copied to clipboard and appears in History.
+5. Repeat with `.mp3` and `.wav` files.
+6. Try file > 25 MB → verify error notification appears.
+7. Press `Cmd+Shift+D`, then press Escape → verify overlay dismissed.
+8. Open file picker and cancel → verify overlay dismissed cleanly.
+
 ## Permission Verification
 1. Remove microphone permission in System Settings.
 2. Trigger recording; verify error state and guidance behavior.
