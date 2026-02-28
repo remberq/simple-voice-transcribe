@@ -27,6 +27,7 @@ class SettingsManager: ObservableObject {
     private let kSavedProviders = "savedProviders"
     private let kActiveProviderId = "activeProviderId"
     private let kStoreAPIKeyInKeychain = "storeAPIKeyInKeychain"
+    private let kMockModeEnabled = "mockModeEnabled"
     
     // Keychain Constants
     private let kKeychainService = "com.anti.VoiceOverlay"
@@ -67,6 +68,10 @@ class SettingsManager: ObservableObject {
     @Published var storeAPIKeyInKeychain: Bool {
         didSet { UserDefaults.standard.set(storeAPIKeyInKeychain, forKey: kStoreAPIKeyInKeychain) }
     }
+    
+    @Published var mockModeEnabled: Bool {
+        didSet { UserDefaults.standard.set(mockModeEnabled, forKey: kMockModeEnabled) }
+    }
 
     // Used when keychain persistence is disabled.
     private var sessionAPIKeys: [UUID: String] = [:]
@@ -78,7 +83,8 @@ class SettingsManager: ObservableObject {
         defaults.register(defaults: [
             kHotkeyKeyCode: 49,
             kHotkeyModifiers: 768,
-            kStoreAPIKeyInKeychain: true
+            kStoreAPIKeyInKeychain: true,
+            kMockModeEnabled: false
         ])
         
         self.hotkeyKeyCode = defaults.integer(forKey: kHotkeyKeyCode)
@@ -96,6 +102,7 @@ class SettingsManager: ObservableObject {
         }
         
         self.storeAPIKeyInKeychain = defaults.bool(forKey: kStoreAPIKeyInKeychain)
+        self.mockModeEnabled = defaults.bool(forKey: kMockModeEnabled)
     }
     
     // MARK: - API Key (Keychain)

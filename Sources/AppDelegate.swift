@@ -8,6 +8,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     var appMenu: NSMenu!
     var settingsWindow: NSWindow?
     var historyWindow: NSWindow?
+    var mockMenuItem: NSMenuItem!
     private var overlayStateCancellable: AnyCancellable?
     private var transcribingAnimationTimer: Timer?
     private var transcribingFrameIndex = 0
@@ -38,10 +39,15 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         
         let menu = NSMenu()
         menu.addItem(NSMenuItem(title: "Toggle Overlay (Debug)", action: #selector(toggleOverlay), keyEquivalent: "o"))
+        menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "Settings...", action: #selector(openSettings), keyEquivalent: ","))
         menu.addItem(NSMenuItem(title: "История транскрибаций", action: #selector(openHistory), keyEquivalent: "h"))
-        menu.addItem(NSMenuItem(title: "Test Notification", action: #selector(testNotification), keyEquivalent: "n"))
         menu.addItem(NSMenuItem.separator())
+        
+        mockMenuItem = NSMenuItem(title: SettingsManager.shared.mockModeEnabled ? "Выключить мок" : "Включить мок", action: #selector(toggleMockMode), keyEquivalent: "m")
+        menu.addItem(mockMenuItem)
+        menu.addItem(NSMenuItem.separator())
+        
         menu.addItem(NSMenuItem(title: "Troubleshooting", action: #selector(openOpsDocs), keyEquivalent: "t"))
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "Quit", action: #selector(quitApp), keyEquivalent: "q"))
@@ -149,6 +155,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         
         NSApp.activate(ignoringOtherApps: true)
         historyWindow?.makeKeyAndOrderFront(nil)
+    }
+    
+    @objc func toggleMockMode() {
+        SettingsManager.shared.mockModeEnabled.toggle()
+        mockMenuItem.title = SettingsManager.shared.mockModeEnabled ? "Выключить мок" : "Включить мок"
     }
     
     @objc func openOpsDocs() {

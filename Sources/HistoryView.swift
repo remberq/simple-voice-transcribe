@@ -6,12 +6,6 @@ struct HistoryView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            Text("История транскрибаций")
-                .font(.headline)
-                .padding()
-            
-            Divider()
-            
             if historyManager.jobs.isEmpty {
                 VStack(spacing: 12) {
                     Image(systemName: "tray")
