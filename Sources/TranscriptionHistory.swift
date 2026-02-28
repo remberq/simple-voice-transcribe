@@ -41,14 +41,10 @@ class TranscriptionHistoryManager: ObservableObject {
     
     @Published var jobs: [TranscriptionJob] = []
     
-    private let kHistoryStorageKey = "transcriptionHistory"
-    
     // Keep track of ongoing task handles if we want to support cancellation
     private var activeTasks: [UUID: Task<Void, Never>] = [:]
     
-    private init() {
-        loadHistory()
-    }
+    private init() {}
     
     var activeJobsCount: Int {
         jobs.filter { $0.status == .running }.count
@@ -70,7 +66,15 @@ class TranscriptionHistoryManager: ObservableObject {
         
         DispatchQueue.main.async {
             self.jobs.insert(job, at: 0) // newest first
-            self.saveHistory()
+            
+            // Keep maximum of 10 items
+            if self.jobs.count > 10 {
+                // If there's an active task for the oldest, cancel it
+                if let oldestId = self.jobs.last?.id {
+                    self.cancelJob(id: oldestId)
+                }
+                self.jobs.removeLast()
+            }
         }
         
         return job
@@ -86,7 +90,6 @@ class TranscriptionHistoryManager: ObservableObject {
                 if let error = errorMessage {
                     self.jobs[index].errorMessage = error
                 }
-                self.saveHistory()
                 
                 // Active task management
                 if status != .running {
@@ -113,7 +116,6 @@ class TranscriptionHistoryManager: ObservableObject {
         DispatchQueue.main.async {
             self.cancelJob(id: id) // ensure it's stopped before deleting
             self.jobs.removeAll { $0.id == id }
-            self.saveHistory()
         }
     }
     
@@ -123,29 +125,6 @@ class TranscriptionHistoryManager: ObservableObject {
                 self.cancelJob(id: id)
             }
             self.jobs.removeAll()
-            self.saveHistory()
-        }
-    }
-    
-    private func saveHistory() {
-        if let data = try? JSONEncoder().encode(jobs) {
-            UserDefaults.standard.set(data, forKey: kHistoryStorageKey)
-        }
-    }
-    
-    private func loadHistory() {
-        if let data = UserDefaults.standard.data(forKey: kHistoryStorageKey),
-           let decoded = try? JSONDecoder().decode([TranscriptionJob].self, from: data) {
-            
-            // Re-map any jobs that were 'running' when the app closed to 'failed' (or cancelled)
-            self.jobs = decoded.map { job in
-                var updatedJob = job
-                if updatedJob.status == .running {
-                    updatedJob.status = .failed
-                    updatedJob.errorMessage = "Прервано при закрытии приложения"
-                }
-                return updatedJob
-            }
         }
     }
 }
