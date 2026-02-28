@@ -231,6 +231,8 @@ class OverlayController: ObservableObject {
         let manager = TranscriptionHistoryManager.shared
         let job = manager.addJob(url: fileUrl, providerName: providerName)
         
+        presentCompletionFeedback(title: "Файл загружается", body: "Нажмите, чтобы открыть историю", openHistory: true)
+        
         executeTranscription(for: job)
     }
     

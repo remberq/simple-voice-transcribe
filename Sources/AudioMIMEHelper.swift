@@ -33,17 +33,14 @@ struct AudioMIMEHelper {
         }
     }
     
-    /// Returns the short format string (e.g. "wav") for the `input_audio.format` field
+    /// Returns the short format string for the `input_audio.format` field
     /// used by OpenRouter / chat-completion endpoints.
+    /// NOTE: OpenAI's input_audio only accepts "wav" and "mp3".
+    /// All other formats fall back to "wav" — the provider decodes internally.
     static func audioFormat(for fileExtension: String) -> String {
         switch fileExtension.lowercased() {
         case "mp3", "mpga":  return "mp3"
-        case "m4a":          return "m4a"
-        case "mp4", "mpeg":  return "mp4"
         case "wav":          return "wav"
-        case "webm":         return "webm"
-        case "ogg":          return "ogg"
-        case "flac":         return "flac"
         default:             return "wav"
         }
     }

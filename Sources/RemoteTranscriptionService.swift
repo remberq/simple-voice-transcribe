@@ -29,10 +29,50 @@ class RemoteTranscriptionService: TranscriptionService {
             throw TranscriptionError.missingAPIKey
         }
         
-        // Read audio file and encode to base64
+        
+        // input_audio only supports raw WAV/PCM. Convert non-wav files using macOS afconvert.
+        let fileToEncode: URL
+        var tempWavURL: URL? = nil
+        
+        if audioFileURL.pathExtension.lowercased() != "wav" {
+            let tmpWav = URL(fileURLWithPath: NSTemporaryDirectory())
+                .appendingPathComponent(UUID().uuidString)
+                .appendingPathExtension("wav")
+            
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/afconvert")
+            process.arguments = [
+                "-f", "WAVE",   // Output format: WAV
+                "-d", "LEI16",  // Linear PCM, 16-bit little-endian
+                "-r", "16000",  // 16kHz sample rate (optimal for STT)
+                audioFileURL.path,
+                tmpWav.path
+            ]
+            
+            do {
+                try process.run()
+                process.waitUntilExit()
+                guard process.terminationStatus == 0 else {
+                    throw TranscriptionError.apiError(message: "Не удалось конвертировать аудио в WAV (exit \(process.terminationStatus)).")
+                }
+                fileToEncode = tmpWav
+                tempWavURL = tmpWav
+                print("\(logPrefix) Converted \(audioFileURL.pathExtension) → WAV (\(tmpWav.lastPathComponent))")
+            } catch let err as TranscriptionError {
+                throw err
+            } catch {
+                throw TranscriptionError.apiError(message: "Ошибка конвертации аудио: \(error.localizedDescription)")
+            }
+        } else {
+            fileToEncode = audioFileURL
+        }
+        
+        // Clean up temp file when done (deferred)
+        defer { if let tmp = tempWavURL { try? FileManager.default.removeItem(at: tmp) } }
+        
         let audioData: Data
         do {
-            audioData = try Data(contentsOf: audioFileURL)
+            audioData = try Data(contentsOf: fileToEncode)
         } catch {
             throw TranscriptionError.emptyAudio
         }
