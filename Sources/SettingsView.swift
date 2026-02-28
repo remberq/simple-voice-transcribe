@@ -82,6 +82,14 @@ struct SettingsView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            
+            // Hidden button to close window on Escape
+            Button("") {
+                NSApp.keyWindow?.close()
+            }
+            .keyboardShortcut(.cancelAction)
+            .opacity(0)
+            .frame(width: 0, height: 0)
         }
         .frame(width: 550, height: 420)
         .background(Color(nsColor: .windowBackgroundColor))

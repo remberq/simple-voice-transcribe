@@ -16,6 +16,7 @@ struct TranscriptionJob: Identifiable, Codable {
     let fileSize: Int64
     let fileFormat: String
     let providerName: String
+    let fileURL: URL
     
     var status: TranscriptionJobStatus
     var uploadProgress: Double = 0.0 // 0.0 to 1.0
@@ -63,6 +64,7 @@ class TranscriptionHistoryManager: ObservableObject {
             fileSize: Int64(size),
             fileFormat: format.isEmpty ? "AUDIO" : format,
             providerName: providerName,
+            fileURL: url,
             status: .uploading
         )
         
@@ -104,6 +106,18 @@ class TranscriptionHistoryManager: ObservableObject {
         DispatchQueue.main.async {
             if let index = self.jobs.firstIndex(where: { $0.id == id }) {
                 self.jobs[index].uploadProgress = max(0.0, min(1.0, progress))
+            }
+        }
+    }
+    
+    func resetJob(id: UUID) {
+        DispatchQueue.main.async {
+            self.cancelJob(id: id)
+            if let index = self.jobs.firstIndex(where: { $0.id == id }) {
+                self.jobs[index].status = .uploading
+                self.jobs[index].uploadProgress = 0.0
+                self.jobs[index].resultText = nil
+                self.jobs[index].errorMessage = nil
             }
         }
     }
