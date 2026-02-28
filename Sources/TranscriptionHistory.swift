@@ -56,7 +56,8 @@ final class TranscriptionHistoryManager: ObservableObject, @unchecked Sendable {
     
     func addJob(id: UUID = UUID(), url: URL, providerName: String) -> TranscriptionJob {
         // Evaluate file size and format
-        let size = (try? Data(contentsOf: url))?.count ?? 0
+        let attrs = try? FileManager.default.attributesOfItem(atPath: url.path)
+        let size = (attrs?[.size] as? Int) ?? 0
         let format = url.pathExtension.uppercased()
         
         let job = TranscriptionJob(

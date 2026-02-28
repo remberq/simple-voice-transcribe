@@ -305,6 +305,8 @@ class OverlayController: ObservableObject {
             case .authorized, .provisional, .ephemeral:
                 self.scheduleNotification(title: title, body: body, openHistory: openHistory)
                 DispatchQueue.main.async {
+                    // Don't hide if a new recording is already in progress (parallel flow)
+                    guard self.state != .recording else { return }
                     self.hide()
                 }
             case .notDetermined:
@@ -312,20 +314,24 @@ class OverlayController: ObservableObject {
                     if granted {
                         self.scheduleNotification(title: title, body: body, openHistory: openHistory)
                         DispatchQueue.main.async {
+                            guard self.state != .recording else { return }
                             self.hide()
                         }
                     } else {
                         DispatchQueue.main.async {
+                            guard self.state != .recording else { return }
                             self.showToastAndHide(body)
                         }
                     }
                 }
             case .denied:
                 DispatchQueue.main.async {
+                    guard self.state != .recording else { return }
                     self.showToastAndHide(body)
                 }
             @unknown default:
                 DispatchQueue.main.async {
+                    guard self.state != .recording else { return }
                     self.showToastAndHide(body)
                 }
             }
