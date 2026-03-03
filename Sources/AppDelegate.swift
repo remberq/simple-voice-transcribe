@@ -8,10 +8,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     var appMenu: NSMenu!
     var settingsWindow: NSWindow?
     var historyWindow: NSWindow?
+    var welcomeWindow: NSWindow?
     var mockMenuItem: NSMenuItem!
     private var historyCancellable: AnyCancellable?
     private var transcribingAnimationTimer: Timer?
     private var transcribingFrameIndex = 0
+    private var shouldRestoreVisibleWindowsAfterPermissionPrompt = false
+    private var permissionFlowObservers: [NSObjectProtocol] = []
     
     private let idleStatusSymbolName = "mic.circle.fill"
     private let transcribingStatusSymbolFrames = [
@@ -28,9 +31,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         notificationCenter.delegate = self
         
         // Request Notification Permissions
-        notificationCenter.requestAuthorization(options: [.alert, .sound]) { granted, error in
+        markPermissionPromptWillBeShown()
+        notificationCenter.requestAuthorization(options: [.alert, .sound]) { [weak self] granted, error in
             if let error = error {
                 print("Notification auth error: \(error)")
+            }
+            DispatchQueue.main.async {
+                self?.restoreVisibleWindowsAfterPermissionPromptIfNeeded()
             }
         }
         
@@ -40,9 +47,28 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
             NSApp.applicationIconImage = appIcon
         }
         
+        let permissionFlowStartObserver = NotificationCenter.default.addObserver(
+            forName: PermissionsCoordinator.permissionFlowWillStartNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.markPermissionPromptWillBeShown()
+        }
+        
+        let permissionFlowFinishObserver = NotificationCenter.default.addObserver(
+            forName: PermissionsCoordinator.permissionFlowDidFinishNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.restoreVisibleWindowsAfterPermissionPromptIfNeeded()
+        }
+        
+        permissionFlowObservers = [permissionFlowStartObserver, permissionFlowFinishObserver]
+        
         let menu = NSMenu()
         menu.addItem(NSMenuItem(title: "Toggle Overlay (Debug)", action: #selector(toggleOverlay), keyEquivalent: "o"))
         menu.addItem(NSMenuItem.separator())
+        menu.addItem(NSMenuItem(title: "Приветствие", action: #selector(openWelcomeFromMenu), keyEquivalent: "w"))
         menu.addItem(NSMenuItem(title: "Settings...", action: #selector(openSettings), keyEquivalent: ","))
         menu.addItem(NSMenuItem(title: "История транскрибаций", action: #selector(openHistory), keyEquivalent: "h"))
         menu.addItem(NSMenuItem.separator())
@@ -68,14 +94,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         // Setup overlay silently
         OverlayController.shared.setup()
         
-        // Pre-warm the Keychain access and proactively ask for Permissions on first launch.
-        // Doing this here prevents the Keychain Prompt from blocking the Settings window UI later.
+        // Pre-warm the Keychain access to prevent Keychain prompt delays in Settings.
         DispatchQueue.global(qos: .userInitiated).async {
             if let activeId = SettingsManager.shared.activeProviderId {
                 _ = SettingsManager.shared.getAPIKey(for: activeId)
-            }
-            DispatchQueue.main.async {
-                PermissionsCoordinator.shared.requestAll { _ in }
             }
         }
         
@@ -87,6 +109,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         
         // Reflect history active jobs in status bar icon animation.
         observeHistoryState()
+        
+        showWelcomeOnFirstLaunchIfNeeded()
+    }
+    
+    func applicationDidBecomeActive(_ notification: Notification) {
+        restoreVisibleWindowsAfterPermissionPromptIfNeeded()
     }
     
     @objc func toggleOverlay() {
@@ -96,12 +124,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     @objc func statusBarButtonClicked(_ sender: NSStatusBarButton) {
         let isSettingsOpen = settingsWindow != nil && settingsWindow!.isVisible
         let isHistoryOpen = historyWindow != nil && historyWindow!.isVisible
+        let isWelcomeOpen = welcomeWindow != nil && welcomeWindow!.isVisible
         
-        if let event = NSApp.currentEvent, event.type == .leftMouseUp && (isSettingsOpen || isHistoryOpen) {
-            // Bring the latest one to front, or both if needed
-            NSApp.activate(ignoringOtherApps: true)
-            if isSettingsOpen { settingsWindow?.makeKeyAndOrderFront(nil) }
-            if isHistoryOpen { historyWindow?.makeKeyAndOrderFront(nil) }
+        if let event = NSApp.currentEvent, event.type == .leftMouseUp && (isSettingsOpen || isHistoryOpen || isWelcomeOpen) {
+            bringVisibleWindowsToFront()
         } else {
             statusItem.menu = appMenu
             statusItem.button?.performClick(nil)
@@ -131,9 +157,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
             self.settingsWindow = window
         }
         
-        // Critical: Force the app and window to the foreground despite LSUIElement
-        NSApp.activate(ignoringOtherApps: true)
-        settingsWindow?.makeKeyAndOrderFront(nil)
+        bringSettingsToFront()
     }
     
     @objc func openHistory() {
@@ -155,8 +179,63 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
             self.historyWindow = window
         }
         
-        NSApp.activate(ignoringOtherApps: true)
-        historyWindow?.makeKeyAndOrderFront(nil)
+        bringHistoryToFront()
+    }
+    
+    @objc func openWelcomeFromMenu() {
+        openWelcome()
+    }
+    
+    func openWelcome() {
+        if welcomeWindow == nil {
+            let view = WelcomeView(
+                onRequestMicrophone: { updateStatus in
+                    let coordinator = PermissionsCoordinator.shared
+                    let status = coordinator.microphoneAuthorizationStatus
+                    
+                    switch status {
+                    case .notDetermined:
+                        coordinator.requestMicrophonePermission { newStatus in
+                            updateStatus(newStatus)
+                        }
+                    case .denied, .restricted:
+                        coordinator.openSystemSettings(for: .microphone)
+                        updateStatus(coordinator.microphoneAuthorizationStatus)
+                    case .authorized:
+                        updateStatus(status)
+                    @unknown default:
+                        updateStatus(status)
+                    }
+                },
+                onStart: { [weak self] in
+                    SettingsManager.shared.hasCompletedWelcome = true
+                    self?.closeWelcome()
+                },
+                onClose: { [weak self] in
+                    self?.closeWelcome()
+                }
+            )
+            let hostingController = NSHostingController(rootView: view)
+            
+            let window = NSWindow(
+                contentRect: NSRect(x: 0, y: 0, width: 560, height: 470),
+                styleMask: [.titled, .closable, .miniaturizable],
+                backing: .buffered,
+                defer: false
+            )
+            window.title = "Добро пожаловать"
+            window.center()
+            window.contentView = hostingController.view
+            window.isReleasedWhenClosed = false
+            
+            self.welcomeWindow = window
+        }
+        
+        bringWelcomeToFront()
+    }
+    
+    func closeWelcome() {
+        welcomeWindow?.orderOut(nil)
     }
     
     @objc func toggleMockMode() {
@@ -222,6 +301,60 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
             ?? NSImage(systemSymbolName: idleStatusSymbolName, accessibilityDescription: "Voice Overlay")?.withSymbolConfiguration(config)
         image?.isTemplate = true
         return image
+    }
+    
+    private func showWelcomeOnFirstLaunchIfNeeded() {
+        if SettingsManager.shared.hasAutoShownWelcomeOnce {
+            return
+        }
+        
+        SettingsManager.shared.hasAutoShownWelcomeOnce = true
+        openWelcome()
+    }
+    
+    private func bringWelcomeToFront() {
+        guard let welcomeWindow = welcomeWindow else { return }
+        NSApp.activate(ignoringOtherApps: true)
+        welcomeWindow.orderFrontRegardless()
+        welcomeWindow.makeKeyAndOrderFront(nil)
+    }
+    
+    private func bringSettingsToFront() {
+        guard let settingsWindow = settingsWindow else { return }
+        NSApp.activate(ignoringOtherApps: true)
+        settingsWindow.orderFrontRegardless()
+        settingsWindow.makeKeyAndOrderFront(nil)
+    }
+    
+    private func bringHistoryToFront() {
+        guard let historyWindow = historyWindow else { return }
+        NSApp.activate(ignoringOtherApps: true)
+        historyWindow.orderFrontRegardless()
+        historyWindow.makeKeyAndOrderFront(nil)
+    }
+    
+    private func bringVisibleWindowsToFront() {
+        if welcomeWindow?.isVisible == true { bringWelcomeToFront() }
+        if settingsWindow?.isVisible == true { bringSettingsToFront() }
+        if historyWindow?.isVisible == true { bringHistoryToFront() }
+    }
+    
+    private func markPermissionPromptWillBeShown() {
+        shouldRestoreVisibleWindowsAfterPermissionPrompt = true
+    }
+    
+    private func restoreVisibleWindowsAfterPermissionPromptIfNeeded() {
+        guard shouldRestoreVisibleWindowsAfterPermissionPrompt else { return }
+        shouldRestoreVisibleWindowsAfterPermissionPrompt = false
+        
+        // System permission dialogs can dismiss asynchronously relative to callback timing.
+        // Restore window order immediately and once more shortly after dismissal.
+        DispatchQueue.main.async { [weak self] in
+            self?.bringVisibleWindowsToFront()
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
+            self?.bringVisibleWindowsToFront()
+        }
     }
     
     func userNotificationCenter(

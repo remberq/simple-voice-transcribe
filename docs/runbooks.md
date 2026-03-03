@@ -17,28 +17,37 @@ defaults delete com.anti.VoiceOverlay
 security delete-generic-password -s "com.anti.VoiceOverlay" -a "com.anti.VoiceOverlay.APIKey"
 ```
 - Session-only mode:
-  - In Settings -> Transcription, disable `Store API key in Keychain`.
+  - In Welcome or Settings, disable `Хранить API-ключи в Keychain`.
   - Key is kept in memory and cleared on app exit.
 
 ## Manual Verification (Core)
 1. Launch app; verify menu-bar icon exists and Dock icon is hidden.
-2. Open Notes and place caret in text area.
-3. Trigger hotkey; verify overlay appears and Notes keeps focus.
-4. Click mic, speak for 2-3 seconds, click mic again.
-5. Verify notification appears and transcript inserts into Notes.
-6. Repeat in Slack/Chrome input.
-7. Repeat on non-editable surface (Finder desktop): verify no insertion.
+2. On first launch, verify Welcome window opens automatically.
+3. Open Notes and place caret in text area.
+4. Trigger hotkey; verify overlay appears and Notes keeps focus.
+5. Click mic, speak for 2-3 seconds, click mic again.
+6. Verify notification appears and transcript is copied/visible in History.
+
+## Manual Verification (Welcome)
+1. Close Welcome without pressing `Начать`.
+2. Restart app.
+3. Verify Welcome does not auto-open again.
+4. Open tray menu and click `Приветствие`.
+5. Verify Welcome opens manually.
+6. Press `Начать` and verify `hasCompletedWelcome` behavior in logs/debugging if needed.
 
 ## Manual Verification (Settings & History)
 1. Open Settings -> Горячая клавиша. Change shortcut, verify it works.
-2. Perform a transcription, verify hovering over the system tray icon says "Идет обработка файла" promptly.
-3. Open "Транскрибации" window from tray.
-4. Verify previous transcription is listed. Click "Копировать", verify clipboard content.
-5. Create a failed transcription (e.g. invalid API key), click "Повторить".
-6. Click "Очистить" to remove all history.
+2. In Welcome, toggle `Хранить API-ключи в Keychain` and verify the same value in Settings -> Система.
+3. Perform a transcription, verify tray tooltip says "Идет обработка файла" while active.
+4. Open "Транскрибации" window from tray.
+5. Verify previous transcription is listed. Click "Копировать", verify clipboard content.
+6. Create a failed transcription (e.g. invalid API key), click "Повторить".
+7. Click "Очистить" to remove all history.
 
 ## Permission Verification
-1. Remove microphone permission in System Settings.
-2. Trigger recording; verify error state and guidance behavior.
-3. Remove accessibility permission.
-4. Verify transcription still runs but insertion is blocked.
+1. Set microphone to `Not Determined` (fresh install/reset permissions) and open Welcome.
+2. Click `Запросить доступ к микрофону`, verify system prompt appears.
+3. Test denied path: deny permission and click button again.
+4. Verify app opens `System Settings > Privacy & Security > Microphone`.
+5. Test authorized path: allow permission and verify recording starts from overlay.
