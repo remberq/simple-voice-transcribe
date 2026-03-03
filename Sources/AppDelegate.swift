@@ -71,6 +71,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         menu.addItem(NSMenuItem(title: "Приветствие", action: #selector(openWelcomeFromMenu), keyEquivalent: "w"))
         menu.addItem(NSMenuItem(title: "Settings...", action: #selector(openSettings), keyEquivalent: ","))
         menu.addItem(NSMenuItem(title: "История транскрибаций", action: #selector(openHistory), keyEquivalent: "h"))
+        menu.addItem(NSMenuItem(title: "Загрузить файл", action: #selector(triggerFileUpload), keyEquivalent: "d"))
         menu.addItem(NSMenuItem.separator())
         mockMenuItem = NSMenuItem(title: SettingsManager.shared.mockModeEnabled ? "Выключить мок (с задержкой)" : "Включить мок (с задержкой)", action: #selector(toggleMockMode), keyEquivalent: "m")
         menu.addItem(mockMenuItem)
@@ -105,6 +106,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         HotkeyManager.shared.onHotkeyPressed = { [weak self] in
             self?.toggleOverlay()
         }
+        HotkeyManager.shared.onFileUploadHotkeyPressed = { [weak self] in
+            self?.triggerFileUpload()
+        }
         HotkeyManager.shared.registerHotkey()
         
         // Reflect history active jobs in status bar icon animation.
@@ -119,6 +123,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     
     @objc func toggleOverlay() {
         OverlayController.shared.toggle()
+    }
+    
+    @objc func triggerFileUpload() {
+        OverlayController.shared.toggleFileUpload()
     }
     
     @objc func statusBarButtonClicked(_ sender: NSStatusBarButton) {
@@ -296,7 +304,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     }
 
     private func makeStatusSymbolImage(named symbolName: String) -> NSImage? {
-        let config = NSImage.SymbolConfiguration(pointSize: 19, weight: .regular)
+        let config = NSImage.SymbolConfiguration(pointSize: 15, weight: .regular)
         let image = NSImage(systemSymbolName: symbolName, accessibilityDescription: "Voice Overlay")?.withSymbolConfiguration(config)
             ?? NSImage(systemSymbolName: idleStatusSymbolName, accessibilityDescription: "Voice Overlay")?.withSymbolConfiguration(config)
         image?.isTemplate = true

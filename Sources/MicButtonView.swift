@@ -48,6 +48,15 @@ struct MicButtonView: View {
                     .scaleEffect(1.3)
                     .allowsHitTesting(false)
             }
+            
+            // 4. File upload icon
+            if controller.state == .fileUpload {
+                Image(systemName: "doc.badge.plus")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 28, height: 28)
+                    .foregroundColor(.white)
+            }
         }
         .frame(width: 80, height: 80, alignment: .center)
         .contentShape(Circle())
@@ -71,6 +80,8 @@ struct MicButtonView: View {
                 controller.handleTap()
             case .recording:
                 controller.handleStop()
+            case .fileUpload:
+                controller.handleFileUploadTap()
             default:
                 break
             }
@@ -85,6 +96,7 @@ struct MicButtonView: View {
         case .recording: return Color.red.opacity(0.85)
         case .transcribing: return Color.blue.opacity(0.85)
         case .error: return Color.red.opacity(0.9)
+        case .fileUpload: return Color.green.opacity(0.85)
         default: return Color(nsColor: .windowBackgroundColor).opacity(0.85)
         }
     }
@@ -115,6 +127,7 @@ struct MicButtonView: View {
         case .recording: return .red.opacity(0.6)
         case .transcribing: return .blue.opacity(0.5)
         case .error: return .red.opacity(0.6)
+        case .fileUpload: return .green.opacity(0.5)
         default: return Color.black.opacity(0.2)
         }
     }
