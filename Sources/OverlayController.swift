@@ -114,6 +114,11 @@ class OverlayController: ObservableObject {
         if let panel = panel, panel.isVisible, state == .fileUpload {
             hide()
         } else {
+            // Stop any active recording before switching to file upload
+            if state == .recording || state == .paused {
+                _ = RecorderService.shared.stopRecording()
+            }
+            
             let mouseLoc = NSEvent.mouseLocation
             var point = CGPoint(x: mouseLoc.x + 24, y: mouseLoc.y - 24)
             
