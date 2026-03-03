@@ -17,6 +17,20 @@ final class VoiceOverlayTests: XCTestCase {
         controller.toastMessage = nil
         super.tearDown()
     }
+    
+    private func waitForOverlayStateChange(
+        _ controller: OverlayController,
+        timeout: TimeInterval = 1.2
+    ) async -> OverlayState {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if controller.state != .idle {
+                return controller.state
+            }
+            try? await Task.sleep(nanoseconds: 50_000_000)
+        }
+        return controller.state
+    }
 
     // MARK: - State Machine Tests
 
@@ -121,19 +135,18 @@ final class VoiceOverlayTests: XCTestCase {
         controller.state = .idle
     }
     
-    func testHandleTapFromIdleRequiresPermission() {
+    func testHandleTapFromIdleRequiresPermission() async {
         let controller = OverlayController.shared
         controller.state = .idle
         
-        // handleTap checks PermissionsCoordinator. Without mic permission in test env,
-        // it should transition to .error or stay in .idle.
-        // We test that it doesn't crash and state is deterministic.
+        // handleTap starts recording asynchronously.
         controller.handleTap()
+        let resultingState = await waitForOverlayStateChange(controller)
         
         // Should either move to .recording (if permissions granted) or .error
         let validStates: [OverlayState] = [.recording, .error]
-        XCTAssertTrue(validStates.contains(controller.state),
-                      "After handleTap, state should be .recording or .error, got \(controller.state)")
+        XCTAssertTrue(validStates.contains(resultingState),
+                      "After handleTap, state should be .recording or .error, got \(resultingState)")
         
         // Reset
         controller.state = .idle

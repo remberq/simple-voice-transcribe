@@ -2,42 +2,50 @@
 
 ## Setup
 - Build and run latest code.
-- Confirm microphone and accessibility permissions can be toggled.
+- Reset app defaults if you need to validate first-launch behavior.
 
 ## Checklist
-1. Overlay Focus
+1. First Launch Welcome
+- Start app after reset.
+- Expected: Welcome window opens automatically once.
+
+2. Welcome Auto-Show Once
+- Close Welcome with `Закрыть` (without `Начать`).
+- Restart app.
+- Expected: Welcome is not auto-shown again.
+
+3. Welcome Manual Reopen
+- Open tray menu and click `Приветствие`.
+- Expected: Welcome opens every time from menu item.
+
+4. Microphone Permission Button
+- In Welcome with `notDetermined`, click request button.
+- Expected: system microphone prompt appears.
+- Deny permission and click again.
+- Expected: app opens microphone settings page.
+- Allow permission and click again.
+- Expected: status shows authorized.
+
+5. Keychain Toggle Sync
+- Toggle `Хранить API-ключи в Keychain` in Welcome.
+- Open Settings -> Система.
+- Expected: toggle value matches.
+
+6. Overlay Focus
 - Open Notes and place caret.
 - Press hotkey.
-- Expected: overlay appears and Notes stays focused.
+- Expected: overlay appears and Notes stays focused (non-activating).
 
-2. Record/Stop/Transcribe
+7. Record/Stop/Transcribe
 - Click mic to start recording.
 - Speak.
 - Click mic again.
-- Expected: transcribing spinner, then completion notification.
+- Expected: transcribing state, then completion notification/history entry.
 
-3. Insertion (Editable Input)
-- Run flow in Notes, Slack input, Chrome input field.
-- Expected: text inserted when input is editable.
-
-4. No Insertion (Non-Editable)
-- Focus desktop/background.
-- Run flow.
-- Expected: no paste into UI; no crash.
-
-5. Focus Changed Safety
-- Start in Notes input.
-- During transcription, switch to another app.
-- Expected: insertion blocked.
-
-6. Missing Microphone Permission
-- Deny microphone and trigger recording.
+8. Missing Microphone Permission
+- Deny microphone and trigger recording from overlay.
 - Expected: error state; app does not crash.
 
-7. Missing Accessibility Permission
-- Deny accessibility and run full flow.
-- Expected: transcription works, insertion blocked.
-
-8. Hotkey Reload
+9. Hotkey Reload
 - Open Settings and reset hotkey.
 - Expected: hotkey still toggles overlay.
