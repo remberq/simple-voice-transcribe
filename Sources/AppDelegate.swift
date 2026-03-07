@@ -122,6 +122,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     }
     
     @objc func toggleOverlay() {
+        if !SettingsManager.shared.hasCompletedWelcome || PermissionsCoordinator.shared.microphoneAuthorizationStatus != .authorized {
+            openWelcome()
+            return
+        }
+        
         OverlayController.shared.toggle()
     }
     
@@ -312,12 +317,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     }
     
     private func showWelcomeOnFirstLaunchIfNeeded() {
-        if SettingsManager.shared.hasAutoShownWelcomeOnce {
-            return
+        // If either welcome hasn't been completed or mic permission isn't granted, ensure we show Welcome
+        if !SettingsManager.shared.hasCompletedWelcome || PermissionsCoordinator.shared.microphoneAuthorizationStatus != .authorized {
+            openWelcome()
         }
-        
-        SettingsManager.shared.hasAutoShownWelcomeOnce = true
-        openWelcome()
     }
     
     private func bringWelcomeToFront() {

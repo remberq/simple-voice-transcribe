@@ -3,12 +3,15 @@
 ## Product Scope
 Voice Overlay is a macOS menu-bar utility (`LSUIElement`) that records voice and returns text into the active work context.
 
-## First-Launch Welcome Flow
-1. On first launch after installation, the app opens a Welcome window automatically.
-2. Auto-show happens exactly once per installation (`hasAutoShownWelcomeOnce`).
-3. Closing the Welcome window without pressing `Начать` does not trigger auto-show again.
-4. Pressing `Начать` marks onboarding as completed (`hasCompletedWelcome = true`).
-5. Welcome can always be reopened manually from the status-bar menu.
+## Welcome Flow & Onboarding Enforcement
+1. The app verifies two conditions before allowing use of the overlay: 
+   - User has completed onboarding (`hasCompletedWelcome`).
+   - Microphone permission is explicitly granted (`AVAuthorizationStatus.authorized`).
+2. If either condition is unmet on App launch or when pressing the global hotkey, the Welcome window opens instead of the overlay.
+3. Closing the Welcome window without pressing `Начать` leaves setup incomplete; the next hotkey press will reopen the Welcome window.
+4. Pressing `Начать` **without** microphone access shows a red inline error message and blocks completion.
+5. Pressing `Начать` **with** microphone access marks onboarding as complete (`hasCompletedWelcome = true`) and closes the window.
+6. Welcome can always be reopened manually from the status-bar menu.
 
 ## Current Behavior (Implemented)
 1. User presses the global hotkey (default `Cmd+Shift+Space`).
