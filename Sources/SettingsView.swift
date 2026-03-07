@@ -106,13 +106,43 @@ struct SettingsView: View {
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                 
-                HotkeyRecorderView(settings: settings)
-                    .padding(.top, 4)
+                HotkeyRecorderView(
+                    keyCode: $settings.hotkeyKeyCode,
+                    modifiers: $settings.hotkeyModifiers
+                )
+                .padding(.top, 4)
                 
                 Button("Сбросить по умолчанию (Cmd+Shift+Space)") {
                     settings.hotkeyKeyCode = 49
                     settings.hotkeyModifiers = 768
                     HotkeyManager.shared.reloadHotkey()
+                }
+                .padding(.top, 8)
+                
+                Divider()
+                    .padding(.vertical, 4)
+                
+                Text("Клавиша паузы записи")
+                    .font(.headline)
+                
+                Text("Эта клавиша ставит запись на паузу во время активной записи. Можно задать одну клавишу или комбинацию.")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                
+                HotkeyRecorderView(
+                    keyCode: $settings.pauseHotkeyKeyCode,
+                    modifiers: $settings.pauseHotkeyModifiers,
+                    allowNoModifiers: true,
+                    onCommit: {
+                        HotkeyManager.shared.reloadPauseHotkey()
+                    }
+                )
+                .padding(.top, 4)
+                
+                Button("Сбросить по умолчанию (Space)") {
+                    settings.pauseHotkeyKeyCode = 49
+                    settings.pauseHotkeyModifiers = 0
+                    HotkeyManager.shared.reloadPauseHotkey()
                 }
                 .padding(.top, 8)
             }

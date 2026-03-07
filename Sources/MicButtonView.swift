@@ -73,13 +73,15 @@ struct MicButtonView: View {
         .onHover { hovering in
             self.isHovering = hovering
         }
-        // Simple tap: idle → recording, recording → stop
+        // Simple tap: idle → recording, recording → stop, paused → resume
         .onTapGesture {
             switch controller.state {
             case .idle, .error:
                 controller.handleTap()
-            case .recording, .paused:
+            case .recording:
                 controller.handleStop()
+            case .paused:
+                controller.handlePauseResume()
             case .fileUpload:
                 controller.handleFileUploadTap()
             default:

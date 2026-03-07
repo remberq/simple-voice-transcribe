@@ -78,30 +78,38 @@ class HotkeyManager {
         }
     }
     
-    private var spaceHotKeyRef: EventHotKeyRef?
+    private var pauseHotKeyRef: EventHotKeyRef?
     
     // Called when the overlay enters recording or paused states
-    func registerSpaceHotkey() {
-        guard spaceHotKeyRef == nil else { return }
+    func registerPauseHotkey() {
+        guard pauseHotKeyRef == nil else { return }
         
-        let spaceKeyCode = UInt32(49) // KeyCode for Space (kVK_Space)
-        let spaceModifiers = UInt32(0) // No modifiers
-        let spaceHotKeyID = EventHotKeyID(signature: OSType(32), id: UInt32(3))
+        let keyCode = UInt32(SettingsManager.shared.pauseHotkeyKeyCode)
+        let modifiers = UInt32(SettingsManager.shared.pauseHotkeyModifiers)
+        let pauseHotKeyID = EventHotKeyID(signature: OSType(32), id: UInt32(3))
         
-        let status = RegisterEventHotKey(spaceKeyCode, spaceModifiers, spaceHotKeyID, GetApplicationEventTarget(), 0, &spaceHotKeyRef)
+        let status = RegisterEventHotKey(keyCode, modifiers, pauseHotKeyID, GetApplicationEventTarget(), 0, &pauseHotKeyRef)
         if status != noErr {
-            print("Failed to register Space hotkey: OSStatus \(status)")
+            print("Failed to register pause hotkey: OSStatus \(status)")
         } else {
-            print("Registered single Space hotkey interception.")
+            print("Registered pause hotkey interception. Code: \(keyCode), Modifiers: \(modifiers)")
         }
     }
     
     // Called when the overlay exits recording or paused states
-    func unregisterSpaceHotkey() {
-        if let ref = spaceHotKeyRef {
+    func unregisterPauseHotkey() {
+        if let ref = pauseHotKeyRef {
             UnregisterEventHotKey(ref)
-            spaceHotKeyRef = nil
-            print("Unregistered single Space hotkey interception.")
+            pauseHotKeyRef = nil
+            print("Unregistered pause hotkey interception.")
+        }
+    }
+    
+    func reloadPauseHotkey() {
+        unregisterPauseHotkey()
+        let state = OverlayController.shared.state
+        if state == .recording || state == .paused {
+            registerPauseHotkey()
         }
     }
     
@@ -114,7 +122,7 @@ class HotkeyManager {
             UnregisterEventHotKey(ref)
             fileUploadHotKeyRef = nil
         }
-        unregisterSpaceHotkey()
+        unregisterPauseHotkey()
     }
     
     func reloadHotkey() {

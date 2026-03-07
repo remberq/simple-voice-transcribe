@@ -83,7 +83,11 @@ struct HotkeyFormatter {
 }
 
 struct HotkeyRecorderView: View {
-    @ObservedObject var settings = SettingsManager.shared
+    @Binding var keyCode: Int
+    @Binding var modifiers: Int
+    var allowNoModifiers: Bool = false
+    var onCommit: (() -> Void)? = nil
+    
     @State private var isRecording = false
     @State private var eventMonitor: Any?
     
@@ -95,7 +99,7 @@ struct HotkeyRecorderView: View {
                 startRecording()
             }
         }) {
-            Text(isRecording ? "Нажмите комбинацию клавиш..." : HotkeyFormatter.format(keyCode: settings.hotkeyKeyCode, modifiers: settings.hotkeyModifiers))
+            Text(isRecording ? "Нажмите комбинацию клавиш..." : HotkeyFormatter.format(keyCode: keyCode, modifiers: modifiers))
                 .frame(minWidth: 150)
                 .contentShape(Rectangle())
                 .padding(.vertical, 4)
@@ -113,26 +117,26 @@ struct HotkeyRecorderView: View {
     
     private func startRecording() {
         isRecording = true
-        // Important: Stop global hotkey before attempting to capture locally to avoid double triggering
+        // Important: Stop global hotkeys before attempting to capture locally to avoid double triggering
         HotkeyManager.shared.unregisterHotkey()
         
         eventMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
             // Map the event down to Carbon
             let carbonModifiers = HotkeyFormatter.convertAppKitModifiersToCarbon(event.modifierFlags)
             
-            // Only accept if at least one modifier is pressed, or if it's a function key, to avoid binding "A" by itself
-            if carbonModifiers > 0 || isFunctionKey(event.keyCode) {
-                settings.hotkeyKeyCode = Int(event.keyCode)
-                settings.hotkeyModifiers = carbonModifiers
-                
-                stopRecording()
-                return nil // consume event
-            }
-            
-            // If they hit escape without modifiers, maybe cancel recording
+            // If they hit escape without modifiers, cancel recording
             if event.keyCode == 53 /* escape */ && carbonModifiers == 0 {
                 stopRecording()
                 return nil
+            }
+            
+            // Accept if at least one modifier is pressed, it's a function key, or allowNoModifiers is true
+            if carbonModifiers > 0 || isFunctionKey(event.keyCode) || allowNoModifiers {
+                keyCode = Int(event.keyCode)
+                modifiers = carbonModifiers
+                
+                stopRecording()
+                return nil // consume event
             }
             
             return event
@@ -146,6 +150,7 @@ struct HotkeyRecorderView: View {
             eventMonitor = nil
         }
         HotkeyManager.shared.reloadHotkey()
+        onCommit?()
     }
     
     private func isFunctionKey(_ keyCode: UInt16) -> Bool {
@@ -154,3 +159,4 @@ struct HotkeyRecorderView: View {
         return fKeys.contains(keyCode)
     }
 }
+
