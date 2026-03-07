@@ -106,9 +106,9 @@ class HotkeyManager {
     }
     
     func reloadPauseHotkey() {
-        let wasActive = pauseHotKeyRef != nil
         unregisterPauseHotkey()
-        if wasActive {
+        let state = OverlayController.shared.state
+        if state == .recording || state == .paused {
             registerPauseHotkey()
         }
     }
