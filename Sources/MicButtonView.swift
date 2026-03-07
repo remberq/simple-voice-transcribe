@@ -13,8 +13,8 @@ struct MicButtonView: View {
                 .fill(backgroundColor)
                 .frame(width: 56, height: 56)
             
-            // 1. The main mic icon — only in idle/error
-            if controller.state == .idle || controller.state == .error {
+            // 1. The main mic icon — only in idle/error/paused
+            if controller.state == .idle || controller.state == .error || controller.state == .paused {
                 Image(systemName: iconName)
                     .resizable()
                     .scaledToFit()
@@ -78,7 +78,7 @@ struct MicButtonView: View {
             switch controller.state {
             case .idle, .error:
                 controller.handleTap()
-            case .recording:
+            case .recording, .paused:
                 controller.handleStop()
             case .fileUpload:
                 controller.handleFileUploadTap()
@@ -94,10 +94,10 @@ struct MicButtonView: View {
         switch controller.state {
         case .idle: return Color(nsColor: .windowBackgroundColor).opacity(0.85)
         case .recording: return Color.red.opacity(0.85)
+        case .paused: return Color.orange.opacity(0.85)
         case .transcribing: return Color.blue.opacity(0.85)
         case .error: return Color.red.opacity(0.9)
         case .fileUpload: return Color.green.opacity(0.85)
-        default: return Color(nsColor: .windowBackgroundColor).opacity(0.85)
         }
     }
     
@@ -105,9 +105,10 @@ struct MicButtonView: View {
         switch controller.state {
         case .idle: return "mic.fill"
         case .recording: return "mic.fill"
+        case .paused: return "pause.fill"
         case .transcribing: return "hourglass" 
         case .error: return "exclamationmark.triangle.fill"
-        default: return "mic.fill"
+        case .fileUpload: return "doc.badge.plus"
         }
     }
     
@@ -115,9 +116,10 @@ struct MicButtonView: View {
         switch controller.state {
         case .idle: return .blue
         case .recording: return .clear // Only equalizer shows
+        case .paused: return .white
         case .transcribing: return .clear // Hidden behind spinner
         case .error: return .white
-        default: return .white
+        case .fileUpload: return .white
         }
     }
     
@@ -125,10 +127,10 @@ struct MicButtonView: View {
         switch controller.state {
         case .idle: return Color.black.opacity(0.2)
         case .recording: return .red.opacity(0.6)
+        case .paused: return .orange.opacity(0.6)
         case .transcribing: return .blue.opacity(0.5)
         case .error: return .red.opacity(0.6)
         case .fileUpload: return .green.opacity(0.5)
-        default: return Color.black.opacity(0.2)
         }
     }
 }

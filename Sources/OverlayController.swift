@@ -82,12 +82,13 @@ class OverlayController: ObservableObject {
             _ = RecorderService.shared.stopRecording()
         }
         state = .idle
+        HotkeyManager.shared.unregisterSpaceHotkey()
     }
     
     func toggle() {
         if let panel = panel, panel.isVisible {
-            if state == .recording {
-                // If recording, stop and transcribe instantly
+            if state == .recording || state == .paused {
+                // If recording or paused, stop and transcribe instantly
                 handleStop()
             } else {
                 hide()
@@ -117,6 +118,7 @@ class OverlayController: ObservableObject {
             // Stop any active recording before switching to file upload
             if state == .recording || state == .paused {
                 _ = RecorderService.shared.stopRecording()
+                HotkeyManager.shared.unregisterSpaceHotkey()
             }
             
             let mouseLoc = NSEvent.mouseLocation
@@ -143,6 +145,7 @@ class OverlayController: ObservableObject {
 
                 if didStart {
                     self.state = .recording
+                    HotkeyManager.shared.registerSpaceHotkey()
                 } else {
                     self.state = .error
                 }
@@ -156,11 +159,26 @@ class OverlayController: ObservableObject {
         case .transcribing:
             // Dismiss on tap
             state = .idle
+            HotkeyManager.shared.unregisterSpaceHotkey()
             hide()
         case .fileUpload:
             // Dismiss file upload overlay on tap
             state = .idle
+            HotkeyManager.shared.unregisterSpaceHotkey()
             hide()
+        }
+    }
+    
+    func handlePauseResume() {
+        switch state {
+        case .recording:
+            RecorderService.shared.pauseRecording()
+            state = .paused
+        case .paused:
+            RecorderService.shared.resumeRecording()
+            state = .recording
+        default:
+            break
         }
     }
     
@@ -198,12 +216,13 @@ class OverlayController: ObservableObject {
     }
     
     func handleStop() {
-        guard state == .recording else { return }
+        guard state == .recording || state == .paused else { return }
         
         // If recording yields immediately
         if let fileUrl = RecorderService.shared.stopRecording() {
             // Immedidately return UI to idle so user can start recording again
             state = .idle
+            HotkeyManager.shared.unregisterSpaceHotkey()
             hide()
             transcribeAndInsert(fileUrl: fileUrl)
         } else {
@@ -212,6 +231,7 @@ class OverlayController: ObservableObject {
             RecorderService.shared.stopRecording { [weak self] url in
                 guard let self = self else { return }
                 self.state = .idle
+                HotkeyManager.shared.unregisterSpaceHotkey()
                 self.hide()
                 if let url = url {
                     self.transcribeAndInsert(fileUrl: url)
