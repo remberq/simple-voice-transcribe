@@ -1,7 +1,7 @@
 # ADR 003: Safe Paste-Based Insertion
 
 ## Status
-Accepted
+Superseded by ADR 005
 
 ## Context
 Direct AX insertion is inconsistent across macOS apps. We need predictable behavior with low risk of destructive insertion.

@@ -13,6 +13,7 @@ This directory keeps only active project documentation.
 - `adr/002-overlay-window.md`
 - `adr/003-insertion-strategy.md`
 - `adr/004-transcription-provider.md`
+- `adr/005-welcome-and-permissions.md`
 
 ## Operations
 - `runbooks.md` - build, run, reset and manual verification.
