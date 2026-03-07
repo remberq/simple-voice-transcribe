@@ -32,6 +32,8 @@ class SettingsManager: ObservableObject {
     private let kMockModeEnabled = "mockModeEnabled"
     private let kHasAutoShownWelcomeOnce = "hasAutoShownWelcomeOnce"
     private let kHasCompletedWelcome = "hasCompletedWelcome"
+    private let kPauseHotkeyKeyCode = "pauseHotkeyKeyCode"
+    private let kPauseHotkeyModifiers = "pauseHotkeyModifiers"
     
     // Keychain Constants
     private let kKeychainService = "com.anti.VoiceOverlay"
@@ -92,6 +94,14 @@ class SettingsManager: ObservableObject {
     @Published var hasCompletedWelcome: Bool {
         didSet { UserDefaults.standard.set(hasCompletedWelcome, forKey: kHasCompletedWelcome) }
     }
+    
+    @Published var pauseHotkeyKeyCode: Int {
+        didSet { UserDefaults.standard.set(pauseHotkeyKeyCode, forKey: kPauseHotkeyKeyCode) }
+    }
+    
+    @Published var pauseHotkeyModifiers: Int {
+        didSet { UserDefaults.standard.set(pauseHotkeyModifiers, forKey: kPauseHotkeyModifiers) }
+    }
 
     // Used when keychain persistence is disabled.
     private var sessionAPIKeys: [UUID: String] = [:]
@@ -108,7 +118,9 @@ class SettingsManager: ObservableObject {
             kStoreAPIKeyInKeychain: true,
             kMockModeEnabled: false,
             kHasAutoShownWelcomeOnce: false,
-            kHasCompletedWelcome: false
+            kHasCompletedWelcome: false,
+            kPauseHotkeyKeyCode: 49, // Space
+            kPauseHotkeyModifiers: 0  // No modifiers
         ])
         
         self.hotkeyKeyCode = defaults.integer(forKey: kHotkeyKeyCode)
@@ -131,6 +143,8 @@ class SettingsManager: ObservableObject {
         self.mockModeEnabled = defaults.bool(forKey: kMockModeEnabled)
         self.hasAutoShownWelcomeOnce = defaults.bool(forKey: kHasAutoShownWelcomeOnce)
         self.hasCompletedWelcome = defaults.bool(forKey: kHasCompletedWelcome)
+        self.pauseHotkeyKeyCode = defaults.integer(forKey: kPauseHotkeyKeyCode)
+        self.pauseHotkeyModifiers = defaults.integer(forKey: kPauseHotkeyModifiers)
     }
     
     // MARK: - API Key (Keychain)

@@ -82,7 +82,7 @@ class OverlayController: ObservableObject {
             _ = RecorderService.shared.stopRecording()
         }
         state = .idle
-        HotkeyManager.shared.unregisterSpaceHotkey()
+        HotkeyManager.shared.unregisterPauseHotkey()
     }
     
     func toggle() {
@@ -118,7 +118,7 @@ class OverlayController: ObservableObject {
             // Stop any active recording before switching to file upload
             if state == .recording || state == .paused {
                 _ = RecorderService.shared.stopRecording()
-                HotkeyManager.shared.unregisterSpaceHotkey()
+                HotkeyManager.shared.unregisterPauseHotkey()
             }
             
             let mouseLoc = NSEvent.mouseLocation
@@ -145,7 +145,7 @@ class OverlayController: ObservableObject {
 
                 if didStart {
                     self.state = .recording
-                    HotkeyManager.shared.registerSpaceHotkey()
+                    HotkeyManager.shared.registerPauseHotkey()
                 } else {
                     self.state = .error
                 }
@@ -159,12 +159,12 @@ class OverlayController: ObservableObject {
         case .transcribing:
             // Dismiss on tap
             state = .idle
-            HotkeyManager.shared.unregisterSpaceHotkey()
+            HotkeyManager.shared.unregisterPauseHotkey()
             hide()
         case .fileUpload:
             // Dismiss file upload overlay on tap
             state = .idle
-            HotkeyManager.shared.unregisterSpaceHotkey()
+            HotkeyManager.shared.unregisterPauseHotkey()
             hide()
         }
     }
@@ -222,7 +222,7 @@ class OverlayController: ObservableObject {
         if let fileUrl = RecorderService.shared.stopRecording() {
             // Immedidately return UI to idle so user can start recording again
             state = .idle
-            HotkeyManager.shared.unregisterSpaceHotkey()
+            HotkeyManager.shared.unregisterPauseHotkey()
             hide()
             transcribeAndInsert(fileUrl: fileUrl)
         } else {
@@ -231,7 +231,7 @@ class OverlayController: ObservableObject {
             RecorderService.shared.stopRecording { [weak self] url in
                 guard let self = self else { return }
                 self.state = .idle
-                HotkeyManager.shared.unregisterSpaceHotkey()
+                HotkeyManager.shared.unregisterPauseHotkey()
                 self.hide()
                 if let url = url {
                     self.transcribeAndInsert(fileUrl: url)

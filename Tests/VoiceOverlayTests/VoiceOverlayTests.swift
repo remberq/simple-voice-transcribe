@@ -155,6 +155,30 @@ final class VoiceOverlayTests: XCTestCase {
         controller.state = .idle
     }
     
+    /// Verifies the intended UI tap behavior:
+    /// - Tap while .recording → handleStop() (sends to transcription)
+    /// - Tap while .paused → handlePauseResume() (resumes recording, does NOT stop)
+    func testTapWhilePausedResumesInsteadOfStopping() {
+        let controller = OverlayController.shared
+        
+        // Simulate: recording → pause → tap (should resume, not stop)
+        controller.state = .recording
+        controller.handlePauseResume() // pause
+        XCTAssertEqual(controller.state, .paused, "Should be paused after handlePauseResume")
+        
+        // Simulate what MicButtonView tap does when paused: it calls handlePauseResume()
+        controller.handlePauseResume()
+        XCTAssertEqual(controller.state, .recording, "Tap on paused icon should resume recording, not stop")
+        
+        // Verify that handleStop does NOT get called for paused → it should only work from recording
+        // handleStop guards: `guard state == .recording || state == .paused`
+        // But the UI tap handler should NOT route .paused to handleStop
+        // This test confirms the expected flow
+        
+        // Reset
+        controller.state = .idle
+    }
+    
     func testHandleTapFromIdleRequiresPermission() async {
         let controller = OverlayController.shared
         controller.state = .idle

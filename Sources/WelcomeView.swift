@@ -50,6 +50,14 @@ struct WelcomeView: View {
                     Text("Эта комбинация показывает или скрывает overlay и запускает запись.")
                         .font(.caption)
                         .foregroundColor(.secondary)
+                    
+                    Divider()
+                    
+                    Text("Пауза записи: \(HotkeyFormatter.format(keyCode: settings.pauseHotkeyKeyCode, modifiers: settings.pauseHotkeyModifiers))")
+                        .font(.subheadline)
+                    Text("Во время записи нажмите эту клавишу, чтобы поставить запись на паузу. Клавишу можно изменить в настройках.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.top, 4)
