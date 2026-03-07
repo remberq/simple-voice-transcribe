@@ -118,6 +118,7 @@ class OverlayController: ObservableObject {
             // Stop any active recording before switching to file upload
             if state == .recording || state == .paused {
                 _ = RecorderService.shared.stopRecording()
+                HotkeyManager.shared.unregisterSpaceHotkey()
             }
             
             let mouseLoc = NSEvent.mouseLocation

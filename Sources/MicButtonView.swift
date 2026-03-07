@@ -78,7 +78,7 @@ struct MicButtonView: View {
             switch controller.state {
             case .idle, .error:
                 controller.handleTap()
-            case .recording:
+            case .recording, .paused:
                 controller.handleStop()
             case .fileUpload:
                 controller.handleFileUploadTap()
