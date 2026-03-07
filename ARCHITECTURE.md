@@ -3,7 +3,7 @@
 ## Runtime Modules
 - `AppDelegate`: status bar menu, app startup, hotkey wiring, settings/history/welcome windows, file-upload entrypoint.
 - `WelcomeView`: first-launch onboarding UI (intro, microphone, hotkey hint, keychain toggle).
-- `HotkeyManager`: global hotkey registration via Carbon `RegisterEventHotKey`. Supports two hotkeys: record toggle (id=1) and file upload (id=2).
+- `HotkeyManager`: global hotkey registration via Carbon `RegisterEventHotKey`. Supports three hotkeys: record toggle (id=1), file upload (id=2), and a dynamically registered Space key for pause/resume (id=3, active only during recording/paused states).
 - `AudioMIMEHelper`: MIME type detection, UTType filtering for NSOpenPanel, file size validation (25 MB limit), and `input_audio.format` mapping.
 - `OverlayController`: panel lifecycle, state machine, record/transcribe orchestration.
 - `OverlayView` + `MicButtonView` + `EqualizerBarsView`: overlay UI states.
