@@ -111,13 +111,13 @@ final class VoiceOverlayTests: XCTestCase {
     
     // MARK: - OverlayController Behavior Tests
     
-    func testHandleStopOnlyWorksInRecordingState() {
+    func testHandleStopWorksInRecordingAndPausedState() {
         let controller = OverlayController.shared
         
         // Ensure we start from idle
         controller.state = .idle
         
-        // handleStop should do nothing when not in recording state
+        // handleStop should do nothing when not in recording or paused state
         controller.handleStop()
         XCTAssertEqual(controller.state, .idle, "handleStop should not change state when idle")
         
@@ -130,6 +130,26 @@ final class VoiceOverlayTests: XCTestCase {
         controller.state = .transcribing
         controller.handleStop()
         XCTAssertEqual(controller.state, .transcribing, "handleStop should not change state when already transcribing")
+        
+        // Reset
+        controller.state = .idle
+    }
+    
+    func testHandlePauseResumeStateToggling() {
+        let controller = OverlayController.shared
+        
+        // Only does something in .recording or .paused
+        controller.state = .idle
+        controller.handlePauseResume()
+        XCTAssertEqual(controller.state, .idle, "handlePauseResume should do nothing when idle")
+        
+        // Start "recording"
+        controller.state = .recording
+        controller.handlePauseResume()
+        XCTAssertEqual(controller.state, .paused, "handlePauseResume should switch .recording to .paused")
+        
+        controller.handlePauseResume()
+        XCTAssertEqual(controller.state, .recording, "handlePauseResume should switch .paused back to .recording")
         
         // Reset
         controller.state = .idle

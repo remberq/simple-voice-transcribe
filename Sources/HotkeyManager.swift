@@ -39,6 +39,9 @@ class HotkeyManager {
                     manager.onHotkeyPressed?()
                 case 2:
                     manager.onFileUploadHotkeyPressed?()
+                case 3:
+                    // Hotkey ID 3 (Spacebar without modifiers) triggers pause/resume
+                    OverlayController.shared.handlePauseResume()
                 default:
                     break
                 }
@@ -75,6 +78,33 @@ class HotkeyManager {
         }
     }
     
+    private var spaceHotKeyRef: EventHotKeyRef?
+    
+    // Called when the overlay enters recording or paused states
+    func registerSpaceHotkey() {
+        guard spaceHotKeyRef == nil else { return }
+        
+        let spaceKeyCode = UInt32(49) // KeyCode for Space (kVK_Space)
+        let spaceModifiers = UInt32(0) // No modifiers
+        let spaceHotKeyID = EventHotKeyID(signature: OSType(32), id: UInt32(3))
+        
+        let status = RegisterEventHotKey(spaceKeyCode, spaceModifiers, spaceHotKeyID, GetApplicationEventTarget(), 0, &spaceHotKeyRef)
+        if status != noErr {
+            print("Failed to register Space hotkey: OSStatus \(status)")
+        } else {
+            print("Registered single Space hotkey interception.")
+        }
+    }
+    
+    // Called when the overlay exits recording or paused states
+    func unregisterSpaceHotkey() {
+        if let ref = spaceHotKeyRef {
+            UnregisterEventHotKey(ref)
+            spaceHotKeyRef = nil
+            print("Unregistered single Space hotkey interception.")
+        }
+    }
+    
     func unregisterHotkey() {
         if let ref = recordHotKeyRef {
             UnregisterEventHotKey(ref)
@@ -84,6 +114,7 @@ class HotkeyManager {
             UnregisterEventHotKey(ref)
             fileUploadHotKeyRef = nil
         }
+        unregisterSpaceHotkey()
     }
     
     func reloadHotkey() {

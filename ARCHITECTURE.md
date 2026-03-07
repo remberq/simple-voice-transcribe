@@ -14,13 +14,14 @@
 - `TranscriptionService` protocol and provider implementations.
 
 ## State Machine
-`idle -> recording -> transcribing -> idle`
+`idle <-> recording -> transcribing -> idle`
 `idle -> fileUpload -> idle` (file picker flow)
+`recording <-> paused` (toggled by Space key)
 
 Exceptional transitions:
 - `idle -> error` when microphone permission is missing.
-- `recording -> idle` on dismiss/hide.
-- `recording -> transcribing` on stop (tap or hotkey toggle).
+- `recording -> idle` or `paused -> idle` on dismiss/hide.
+- `recording -> transcribing` or `paused -> transcribing` on stop (tap or main hotkey toggle).
 - `idle -> fileUpload` on file upload hotkey (`Cmd+Shift+D`).
 - `fileUpload -> idle` after file selection or cancel.
 
