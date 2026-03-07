@@ -4,6 +4,7 @@ import AVFoundation
 struct WelcomeView: View {
     @ObservedObject private var settings = SettingsManager.shared
     @State private var microphoneStatus = PermissionsCoordinator.shared.microphoneAuthorizationStatus
+    @State private var showPermissionError = false
     
     let onRequestMicrophone: (@escaping (AVAuthorizationStatus) -> Void) -> Void
     let onStart: () -> Void
@@ -32,6 +33,7 @@ struct WelcomeView: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
                     Button(microphoneButtonTitle) {
+                        showPermissionError = false
                         onRequestMicrophone { newStatus in
                             microphoneStatus = newStatus
                         }
@@ -67,10 +69,20 @@ struct WelcomeView: View {
             Spacer(minLength: 0)
             
             HStack {
+                if showPermissionError && microphoneStatus != .authorized {
+                    Text("Для работы приложения разрешите доступ к микрофону.")
+                        .foregroundColor(.red)
+                        .font(.caption)
+                }
+                
                 Spacer()
                 Button("Закрыть", action: onClose)
                 Button("Начать") {
-                    onStart()
+                    if microphoneStatus == .authorized {
+                        onStart()
+                    } else {
+                        showPermissionError = true
+                    }
                 }
                 .keyboardShortcut(.defaultAction)
             }
