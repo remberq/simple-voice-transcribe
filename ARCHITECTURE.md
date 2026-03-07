@@ -24,10 +24,11 @@ Exceptional transitions:
 - `idle -> fileUpload` on file upload hotkey (`Cmd+Shift+D`).
 - `fileUpload -> idle` after file selection or cancel.
 
-## First-Launch Lifecycle
-- On startup, `AppDelegate` checks `SettingsManager.hasAutoShownWelcomeOnce`.
-- If `false`, it is set to `true` and Welcome window is shown.
-- `hasCompletedWelcome` is set only when user presses `Начать`.
+## First-Launch Lifecycle / Onboarding
+- On startup, `AppDelegate` checks if setup is complete (`hasCompletedWelcome`) and if microphone permission is granted.
+- If either condition is not met, the Welcome window is shown, overriding the overlay.
+- `hasCompletedWelcome` is set only when the user presses `Начать` *and* microphone permission is already granted.
+- Pressing the hotkey while onboarding is incomplete will redirect to the Welcome window rather than opening the overlay.
 
 ## Build System
 - No `.xcodeproj`.
