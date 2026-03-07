@@ -3,7 +3,8 @@
 ## Runtime Modules
 - `AppDelegate`: status bar menu, app startup, hotkey wiring, settings/history/welcome windows.
 - `WelcomeView`: first-launch onboarding UI (intro, microphone, hotkey hint, keychain toggle).
-- `HotkeyManager`: global hotkey registration via Carbon `RegisterEventHotKey`.
+- `HotkeyManager`: global hotkey registration via Carbon `RegisterEventHotKey`. Supports two hotkeys: record toggle (id=1) and file upload (id=2).
+- `AudioMIMEHelper`: MIME type detection, UTType filtering for NSOpenPanel, file size validation (25 MB limit), and `input_audio.format` mapping.
 - `OverlayController`: panel lifecycle, state machine, record/transcribe orchestration.
 - `OverlayView` + `MicButtonView` + `EqualizerBarsView`: overlay UI states.
 - `RecorderService`: `AVAudioRecorder` WAV capture + level metering.
@@ -14,11 +15,14 @@
 
 ## State Machine
 `idle -> recording -> transcribing -> idle`
+`idle -> fileUpload -> idle` (file picker flow)
 
 Exceptional transitions:
 - `idle -> error` when microphone permission is missing.
 - `recording -> idle` on dismiss/hide.
 - `recording -> transcribing` on stop (tap or hotkey toggle).
+- `idle -> fileUpload` on file upload hotkey (`Cmd+Shift+D`).
+- `fileUpload -> idle` after file selection or cancel.
 
 ## First-Launch Lifecycle
 - On startup, `AppDelegate` checks `SettingsManager.hasAutoShownWelcomeOnce`.
