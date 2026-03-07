@@ -1,7 +1,7 @@
 # Voice Overlay Architecture
 
 ## Runtime Modules
-- `AppDelegate`: status bar menu, app startup, hotkey wiring, settings/history/welcome windows.
+- `AppDelegate`: status bar menu, app startup, hotkey wiring, settings/history/welcome windows, file-upload entrypoint.
 - `WelcomeView`: first-launch onboarding UI (intro, microphone, hotkey hint, keychain toggle).
 - `HotkeyManager`: global hotkey registration via Carbon `RegisterEventHotKey`. Supports two hotkeys: record toggle (id=1) and file upload (id=2).
 - `AudioMIMEHelper`: MIME type detection, UTType filtering for NSOpenPanel, file size validation (25 MB limit), and `input_audio.format` mapping.

@@ -39,6 +39,15 @@ Voice Overlay is a macOS menu-bar utility (`LSUIElement`) that records voice and
 - Keychain toggle (`storeAPIKeyInKeychain`) with short explanation.
 - Action buttons: `Начать` and `Закрыть`.
 
+## Direct File Upload
+1. User presses file upload hotkey (default `Cmd+Shift+D`).
+2. Green overlay with a file icon appears near cursor.
+3. Click icon → `NSOpenPanel` opens, filtered to audio formats: wav, mp3, m4a, mp4, webm, ogg, flac.
+4. File size validated (max 25 MB).
+5. Non-WAV files auto-converted to WAV via macOS `afconvert` for providers requiring WAV input.
+6. "Файл загружается" notification appears; user can click it to open History.
+7. Same transcription → clipboard flow as voice recording.
+
 ## UI States
 - `idle`: mic icon
 - `recording`: red background + live equalizer
