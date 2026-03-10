@@ -79,9 +79,7 @@ class OverlayController: ObservableObject {
         toastMessage = nil
         panel?.orderOut(nil) // Hide without destroying — close() invalidates the panel
 
-        let shouldCancelRecording = activeRecordingRequestID != nil || state == .recording || state == .paused
-        activeRecordingRequestID = nil
-        if shouldCancelRecording {
+        if state == .recording || state == .paused {
             RecorderService.shared.cancelRecording()
         }
         state = .idle
@@ -93,6 +91,9 @@ class OverlayController: ObservableObject {
             if state == .recording || state == .paused {
                 // If recording or paused, stop and transcribe instantly
                 handleStop()
+            } else if activeRecordingRequestID != nil {
+                cancelPendingRecordingStart()
+                hide()
             } else {
                 hide()
             }
@@ -119,9 +120,9 @@ class OverlayController: ObservableObject {
             hide()
         } else {
             // Stop any active recording before switching to file upload
-            let shouldCancelRecording = activeRecordingRequestID != nil || state == .recording || state == .paused
-            activeRecordingRequestID = nil
-            if shouldCancelRecording {
+            if activeRecordingRequestID != nil {
+                cancelPendingRecordingStart()
+            } else if state == .recording || state == .paused {
                 RecorderService.shared.cancelRecording()
                 HotkeyManager.shared.unregisterRecordingSessionHotkeys()
             }
@@ -194,6 +195,11 @@ class OverlayController: ObservableObject {
         default:
             break
         }
+    }
+
+    private func cancelPendingRecordingStart() {
+        activeRecordingRequestID = nil
+        RecorderService.shared.cancelRecording()
     }
 
     func handleCancelRecording() {
