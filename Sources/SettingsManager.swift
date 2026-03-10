@@ -34,6 +34,8 @@ class SettingsManager: ObservableObject {
     private let kHasCompletedWelcome = "hasCompletedWelcome"
     private let kPauseHotkeyKeyCode = "pauseHotkeyKeyCode"
     private let kPauseHotkeyModifiers = "pauseHotkeyModifiers"
+    private let kCancelHotkeyKeyCode = "cancelHotkeyKeyCode"
+    private let kCancelHotkeyModifiers = "cancelHotkeyModifiers"
     
     // Keychain Constants
     private let kKeychainService = "com.anti.VoiceOverlay"
@@ -103,6 +105,14 @@ class SettingsManager: ObservableObject {
         didSet { UserDefaults.standard.set(pauseHotkeyModifiers, forKey: kPauseHotkeyModifiers) }
     }
 
+    @Published var cancelHotkeyKeyCode: Int {
+        didSet { UserDefaults.standard.set(cancelHotkeyKeyCode, forKey: kCancelHotkeyKeyCode) }
+    }
+
+    @Published var cancelHotkeyModifiers: Int {
+        didSet { UserDefaults.standard.set(cancelHotkeyModifiers, forKey: kCancelHotkeyModifiers) }
+    }
+
     // Used when keychain persistence is disabled.
     private var sessionAPIKeys: [UUID: String] = [:]
     
@@ -120,7 +130,9 @@ class SettingsManager: ObservableObject {
             kHasAutoShownWelcomeOnce: false,
             kHasCompletedWelcome: false,
             kPauseHotkeyKeyCode: 49, // Space
-            kPauseHotkeyModifiers: 0  // No modifiers
+            kPauseHotkeyModifiers: 0,  // No modifiers
+            kCancelHotkeyKeyCode: 53, // Escape
+            kCancelHotkeyModifiers: 0
         ])
         
         self.hotkeyKeyCode = defaults.integer(forKey: kHotkeyKeyCode)
@@ -145,6 +157,8 @@ class SettingsManager: ObservableObject {
         self.hasCompletedWelcome = defaults.bool(forKey: kHasCompletedWelcome)
         self.pauseHotkeyKeyCode = defaults.integer(forKey: kPauseHotkeyKeyCode)
         self.pauseHotkeyModifiers = defaults.integer(forKey: kPauseHotkeyModifiers)
+        self.cancelHotkeyKeyCode = defaults.integer(forKey: kCancelHotkeyKeyCode)
+        self.cancelHotkeyModifiers = defaults.integer(forKey: kCancelHotkeyModifiers)
     }
     
     // MARK: - API Key (Keychain)

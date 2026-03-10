@@ -12,70 +12,84 @@ struct WelcomeView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Добро пожаловать в Voice Overlay")
-                .font(.title2)
-                .bold()
-            Text("Приложение запускается из меню-бара и записывает голос в текст по горячей клавише.")
-                .foregroundColor(.secondary)
-            
-            Divider()
-            
-            GroupBox("Микрофон") {
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack(spacing: 8) {
-                        Circle()
-                            .fill(microphoneStatusColor)
-                            .frame(width: 8, height: 8)
-                        Text(microphoneStatusText)
-                            .font(.subheadline)
-                    }
-                    Text("Разрешение запрашивается только после явного нажатия кнопки.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    Button(microphoneButtonTitle) {
-                        showPermissionError = false
-                        onRequestMicrophone { newStatus in
-                            microphoneStatus = newStatus
-                        }
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.top, 4)
-            }
-            
-            GroupBox("Горячая клавиша") {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("По умолчанию: Cmd+Shift+Space")
-                        .font(.subheadline)
-                    Text("Эта комбинация показывает или скрывает overlay и запускает запись.")
-                        .font(.caption)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Добро пожаловать в Voice Overlay")
+                        .font(.title2)
+                        .bold()
+                    Text("Приложение запускается из меню-бара и записывает голос в текст по горячей клавише.")
                         .foregroundColor(.secondary)
                     
                     Divider()
                     
-                    Text("Пауза записи: \(HotkeyFormatter.format(keyCode: settings.pauseHotkeyKeyCode, modifiers: settings.pauseHotkeyModifiers))")
-                        .font(.subheadline)
-                    Text("Во время записи нажмите эту клавишу, чтобы поставить запись на паузу. Клавишу можно изменить в настройках.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                    GroupBox("Микрофон") {
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack(spacing: 8) {
+                                Circle()
+                                    .fill(microphoneStatusColor)
+                                    .frame(width: 8, height: 8)
+                                Text(microphoneStatusText)
+                                    .font(.subheadline)
+                            }
+                            Text("Разрешение запрашивается только после явного нажатия кнопки.")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            Button(microphoneButtonTitle) {
+                                showPermissionError = false
+                                onRequestMicrophone { newStatus in
+                                    microphoneStatus = newStatus
+                                }
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.top, 4)
+                    }
+                    
+                    GroupBox("Горячая клавиша") {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("По умолчанию: Cmd+Shift+Space")
+                                .font(.subheadline)
+                            Text("Эта комбинация показывает или скрывает overlay и запускает запись.")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            
+                            Divider()
+                            
+                            Text("Пауза записи: \(HotkeyFormatter.format(keyCode: settings.pauseHotkeyKeyCode, modifiers: settings.pauseHotkeyModifiers))")
+                                .font(.subheadline)
+                            Text("Во время записи нажмите эту клавишу, чтобы поставить запись на паузу. Клавишу можно изменить в настройках.")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+
+                            Divider()
+
+                            Text("Отмена записи: \(HotkeyFormatter.format(keyCode: settings.cancelHotkeyKeyCode, modifiers: settings.cancelHotkeyModifiers))")
+                                .font(.subheadline)
+                            Text("Во время записи или паузы нажмите эту клавишу, чтобы отменить запись без отправки в транскрибацию.")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.top, 4)
+                    }
+
+                    GroupBox("Хранение API-ключей") {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Toggle("Хранить API-ключи в Keychain", isOn: $settings.storeAPIKeyInKeychain)
+                            Text("Если выключено, ключи хранятся только в памяти до закрытия приложения.")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.top, 4)
+                    }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.top, 4)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             
-            GroupBox("Хранение API-ключей") {
-                VStack(alignment: .leading, spacing: 8) {
-                    Toggle("Хранить API-ключи в Keychain", isOn: $settings.storeAPIKeyInKeychain)
-                    Text("Если выключено, ключи хранятся только в памяти до закрытия приложения.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.top, 4)
-            }
-            
-            Spacer(minLength: 0)
-            
+            Divider()
+
             HStack {
                 if showPermissionError && microphoneStatus != .authorized {
                     Text("Для работы приложения разрешите доступ к микрофону.")
@@ -96,7 +110,8 @@ struct WelcomeView: View {
             }
         }
         .padding(20)
-        .frame(width: 560, height: 470)
+        .frame(width: 560)
+        .frame(minHeight: 470)
         .onAppear {
             microphoneStatus = PermissionsCoordinator.shared.microphoneAuthorizationStatus
         }

@@ -20,6 +20,9 @@ enum SettingsTab: String, CaseIterable, Identifiable {
 struct SettingsView: View {
     @ObservedObject var settings = SettingsManager.shared
     @State private var selectedTab: SettingsTab = .transcription
+    @State private var mainHotkeyError: String? = nil
+    @State private var pauseHotkeyError: String? = nil
+    @State private var cancelHotkeyError: String? = nil
     
     // MARK: - Add Provider Form State
     @State private var isAddingProvider = false
@@ -108,13 +111,30 @@ struct SettingsView: View {
                 
                 HotkeyRecorderView(
                     keyCode: $settings.hotkeyKeyCode,
-                    modifiers: $settings.hotkeyModifiers
+                    modifiers: $settings.hotkeyModifiers,
+                    validate: { keyCode, modifiers in
+                        validateHotkey(kind: .main, keyCode: keyCode, modifiers: modifiers)
+                    },
+                    onValidationMessage: { message in
+                        mainHotkeyError = message
+                    },
+                    onCommit: {
+                        mainHotkeyError = nil
+                        HotkeyManager.shared.reloadHotkey()
+                    }
                 )
                 .padding(.top, 4)
+
+                if let mainHotkeyError {
+                    Text(mainHotkeyError)
+                        .font(.caption)
+                        .foregroundColor(.red)
+                }
                 
                 Button("Сбросить по умолчанию (Cmd+Shift+Space)") {
                     settings.hotkeyKeyCode = 49
                     settings.hotkeyModifiers = 768
+                    mainHotkeyError = nil
                     HotkeyManager.shared.reloadHotkey()
                 }
                 .padding(.top, 8)
@@ -133,16 +153,71 @@ struct SettingsView: View {
                     keyCode: $settings.pauseHotkeyKeyCode,
                     modifiers: $settings.pauseHotkeyModifiers,
                     allowNoModifiers: true,
+                    validate: { keyCode, modifiers in
+                        validateHotkey(kind: .pause, keyCode: keyCode, modifiers: modifiers)
+                    },
+                    onValidationMessage: { message in
+                        pauseHotkeyError = message
+                    },
                     onCommit: {
-                        HotkeyManager.shared.reloadPauseHotkey()
+                        pauseHotkeyError = nil
+                        HotkeyManager.shared.reloadRecordingSessionHotkeys()
                     }
                 )
                 .padding(.top, 4)
+
+                if let pauseHotkeyError {
+                    Text(pauseHotkeyError)
+                        .font(.caption)
+                        .foregroundColor(.red)
+                }
                 
                 Button("Сбросить по умолчанию (Space)") {
                     settings.pauseHotkeyKeyCode = 49
                     settings.pauseHotkeyModifiers = 0
-                    HotkeyManager.shared.reloadPauseHotkey()
+                    pauseHotkeyError = nil
+                    HotkeyManager.shared.reloadRecordingSessionHotkeys()
+                }
+                .padding(.top, 8)
+
+                Divider()
+                    .padding(.vertical, 4)
+
+                Text("Клавиша отмены записи")
+                    .font(.headline)
+
+                Text("Эта клавиша отменяет текущую запись и закрывает overlay. Можно задать одну клавишу или комбинацию.")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+
+                HotkeyRecorderView(
+                    keyCode: $settings.cancelHotkeyKeyCode,
+                    modifiers: $settings.cancelHotkeyModifiers,
+                    allowNoModifiers: true,
+                    validate: { keyCode, modifiers in
+                        validateHotkey(kind: .cancel, keyCode: keyCode, modifiers: modifiers)
+                    },
+                    onValidationMessage: { message in
+                        cancelHotkeyError = message
+                    },
+                    onCommit: {
+                        cancelHotkeyError = nil
+                        HotkeyManager.shared.reloadRecordingSessionHotkeys()
+                    }
+                )
+                .padding(.top, 4)
+
+                if let cancelHotkeyError {
+                    Text(cancelHotkeyError)
+                        .font(.caption)
+                        .foregroundColor(.red)
+                }
+
+                Button("Сбросить по умолчанию (Escape)") {
+                    settings.cancelHotkeyKeyCode = 53
+                    settings.cancelHotkeyModifiers = 0
+                    cancelHotkeyError = nil
+                    HotkeyManager.shared.reloadRecordingSessionHotkeys()
                 }
                 .padding(.top, 8)
             }
@@ -686,5 +761,28 @@ struct SettingsView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding()
         }
+    }
+
+    private enum EditableHotkeyKind {
+        case main
+        case pause
+        case cancel
+    }
+
+    private func validateHotkey(kind: EditableHotkeyKind, keyCode: Int, modifiers: Int) -> String? {
+        let reservedHotkeys: [(EditableHotkeyKind?, Int, Int, String)] = [
+            (.main, settings.hotkeyKeyCode, settings.hotkeyModifiers, "глобальной горячей клавиши"),
+            (nil, settings.fileUploadHotkeyKeyCode, settings.fileUploadHotkeyModifiers, "загрузки файла"),
+            (.pause, settings.pauseHotkeyKeyCode, settings.pauseHotkeyModifiers, "паузы записи"),
+            (.cancel, settings.cancelHotkeyKeyCode, settings.cancelHotkeyModifiers, "отмены записи")
+        ]
+
+        if let conflict = reservedHotkeys.first(where: { existingKind, existingKeyCode, existingModifiers, _ in
+            existingKind != .some(kind) && existingKeyCode == keyCode && existingModifiers == modifiers
+        }) {
+            return "Это сочетание уже используется для \(conflict.3)."
+        }
+
+        return nil
     }
 }

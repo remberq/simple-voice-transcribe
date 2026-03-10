@@ -86,6 +86,8 @@ struct HotkeyRecorderView: View {
     @Binding var keyCode: Int
     @Binding var modifiers: Int
     var allowNoModifiers: Bool = false
+    var validate: ((Int, Int) -> String?)? = nil
+    var onValidationMessage: ((String?) -> Void)? = nil
     var onCommit: (() -> Void)? = nil
     
     @State private var isRecording = false
@@ -132,9 +134,16 @@ struct HotkeyRecorderView: View {
             
             // Accept if at least one modifier is pressed, it's a function key, or allowNoModifiers is true
             if carbonModifiers > 0 || isFunctionKey(event.keyCode) || allowNoModifiers {
+                if let error = validate?(Int(event.keyCode), carbonModifiers) {
+                    onValidationMessage?(error)
+                    stopRecording(notifyCommit: false)
+                    return nil
+                }
+
                 keyCode = Int(event.keyCode)
                 modifiers = carbonModifiers
-                
+
+                onValidationMessage?(nil)
                 stopRecording()
                 return nil // consume event
             }
@@ -143,14 +152,16 @@ struct HotkeyRecorderView: View {
         }
     }
     
-    private func stopRecording() {
+    private func stopRecording(notifyCommit: Bool = true) {
         isRecording = false
         if let monitor = eventMonitor {
             NSEvent.removeMonitor(monitor)
             eventMonitor = nil
         }
         HotkeyManager.shared.reloadHotkey()
-        onCommit?()
+        if notifyCommit {
+            onCommit?()
+        }
     }
     
     private func isFunctionKey(_ keyCode: UInt16) -> Bool {
@@ -159,4 +170,3 @@ struct HotkeyRecorderView: View {
         return fKeys.contains(keyCode)
     }
 }
-

@@ -12,9 +12,10 @@
 2. Press hotkey.
 3. Overlay appears without stealing focus.
 4. Click mic -> recording starts.
-5. Click mic again -> recording stops, transcription runs.
-6. Transcript is copied and tracked in History.
-7. Overlay closes.
+5. Press pause hotkey to pause/resume, or press cancel hotkey (default `Escape`) to discard the current recording and close the overlay without transcription.
+6. Click mic again -> recording stops, transcription runs.
+7. Transcript is copied and tracked in History.
+8. Overlay closes.
 
 ## File Upload Path
 1. Press file upload hotkey (default `Cmd+Shift+D`).
@@ -28,6 +29,7 @@
 - If the frontmost app changed since recording started, insertion is blocked.
 - If focused element is not editable, insertion is blocked.
 - If insertion is blocked, user still gets notification with result status.
+- Cancelling a recording never creates a History item and never shows a completion notification.
 
 ## Welcome Reopen Flow
 1. User opens tray menu.
