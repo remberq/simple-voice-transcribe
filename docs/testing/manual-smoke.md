@@ -42,10 +42,25 @@
 - Click mic again.
 - Expected: transcribing state, then completion notification/history entry.
 
-8. Missing Microphone Permission
+8. Cancel Recording
+- Click mic to start recording.
+- Press `Escape`.
+- Expected: overlay closes, audio is discarded, no history entry or completion notification is created.
+
+9. Cancel Paused Recording
+- Click mic to start recording.
+- Press the pause hotkey.
+- Press `Escape`.
+- Expected: paused recording is discarded and overlay closes.
+
+10. Missing Microphone Permission
 - Deny microphone and trigger recording from overlay.
 - Expected: error state; app does not crash.
 
-9. Hotkey Reload
+11. Hotkey Reload
 - Open Settings and reset hotkey.
 - Expected: hotkey still toggles overlay.
+
+12. Hotkey Conflict Validation
+- In Settings, try to assign the same shortcut to cancel and pause, then to cancel and main hotkey.
+- Expected: validation error is shown and the old shortcut remains active.

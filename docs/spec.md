@@ -18,6 +18,7 @@ Voice Overlay is a macOS menu-bar utility (`LSUIElement`) that records voice and
 2. Overlay appears as a non-activating floating panel near caret, focused element, or mouse fallback.
 3. Click mic to start recording.
    - *Pause feature*: While recording, pressing the configurable pause key (default `Space`) pauses the recording and changes the background to orange with a pause icon. Pressing it again resumes recording. The pause key can be changed in Settings.
+   - *Cancel feature*: While recording or paused, pressing the configurable cancel key (default `Escape`) discards the current audio, closes the overlay, and does not start transcription. The cancel key can be changed in Settings and supports either a single key or a combination.
 4. Click mic while recording to stop and start transcription. Click mic while paused to resume recording.
    - Pressing the main hotkey while recording or paused always stops and sends for transcription.
 5. App transcribes audio using selected provider:
@@ -40,7 +41,7 @@ Voice Overlay is a macOS menu-bar utility (`LSUIElement`) that records voice and
 ## Welcome Window Sections
 - Intro text.
 - Microphone status + explicit button for permission request.
-- Hotkey hint (text only, no inline editor).
+- Hotkey hint (text only, no inline editor) for the main hotkey, pause hotkey, and cancel hotkey.
 - Keychain toggle (`storeAPIKeyInKeychain`) with short explanation.
 - Action buttons: `Начать` and `Закрыть`.
 

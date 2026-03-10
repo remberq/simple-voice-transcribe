@@ -14,6 +14,7 @@ class RecorderService: NSObject, ObservableObject, AVAudioRecorderDelegate {
     // Safety flag to prevent rapid stop before start finishes
     private var isPreparing = false
     private var pendingStop = false
+    private var pendingCancel = false
     private var onPendingStopComplete: ((URL?) -> Void)?
     
     private override init() {
@@ -35,6 +36,7 @@ class RecorderService: NSObject, ObservableObject, AVAudioRecorderDelegate {
         guard !isPreparing else { return }
         isPreparing = true
         pendingStop = false
+        pendingCancel = false
         
         checkPermission { [weak self] granted in
             guard let self = self else { return }
@@ -65,6 +67,17 @@ class RecorderService: NSObject, ObservableObject, AVAudioRecorderDelegate {
                 self.audioRecorder?.delegate = self
                 self.audioRecorder?.isMeteringEnabled = true
                 let didStart = self.audioRecorder?.record() ?? false
+                self.isPreparing = false
+
+                if self.pendingCancel {
+                    self.pendingCancel = false
+                    self.pendingStop = false
+                    self.onPendingStopComplete = nil
+                    self.cancelRecording()
+                    completion?(false)
+                    return
+                }
+
                 if didStart {
                     self.startMetering()
                     print("Recording started at: \(url)")
@@ -77,13 +90,12 @@ class RecorderService: NSObject, ObservableObject, AVAudioRecorderDelegate {
                 }
             } catch {
                 print("Failed to setup audio recorder: \(error)")
+                self.isPreparing = false
                 self.audioRecorder = nil
                 self.recordingURL = nil
                 completion?(false)
             }
-            
-            self.isPreparing = false
-            
+
             // If the user tapped stop before we finished building the recorder, process it now
             if self.pendingStop {
                 self.pendingStop = false
@@ -108,16 +120,27 @@ class RecorderService: NSObject, ObservableObject, AVAudioRecorderDelegate {
         if isPreparing {
             print("Stop called while preparing, queuing stop event.")
             pendingStop = true
+            pendingCancel = false
             return nil 
         }
-        
-        stopMetering()
-        audioRecorder?.stop()
-        let finalUrl = recordingURL
-        self.audioRecorder = nil
-        self.recordingURL = nil
+
+        let finalUrl = finalizeRecording()
         print("Recording stopped. File at: \(String(describing: finalUrl))")
         return finalUrl
+    }
+
+    func cancelRecording() {
+        if isPreparing {
+            print("Cancel called while preparing, queuing cancel event.")
+            pendingCancel = true
+            pendingStop = false
+            onPendingStopComplete = nil
+            return
+        }
+
+        let cancelledUrl = finalizeRecording()
+        removeFileIfNeeded(at: cancelledUrl)
+        print("Recording cancelled. File discarded: \(String(describing: cancelledUrl))")
     }
     
     // MARK: - Audio Level Metering
@@ -151,9 +174,30 @@ class RecorderService: NSObject, ObservableObject, AVAudioRecorderDelegate {
         if isPreparing {
             print("Stop called while preparing, queuing stop with callback.")
             pendingStop = true
+            pendingCancel = false
             onPendingStopComplete = completion
         } else {
             completion(stopRecording())
+        }
+    }
+
+    private func finalizeRecording() -> URL? {
+        stopMetering()
+        audioRecorder?.stop()
+        let finalUrl = recordingURL
+        audioRecorder = nil
+        recordingURL = nil
+        return finalUrl
+    }
+
+    private func removeFileIfNeeded(at url: URL?) {
+        guard let url = url else { return }
+        do {
+            if FileManager.default.fileExists(atPath: url.path) {
+                try FileManager.default.removeItem(at: url)
+            }
+        } catch {
+            print("Failed to remove cancelled recording: \(error)")
         }
     }
 }

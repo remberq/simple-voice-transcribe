@@ -40,8 +40,9 @@ class HotkeyManager {
                 case 2:
                     manager.onFileUploadHotkeyPressed?()
                 case 3:
-                    // Hotkey ID 3 (Spacebar without modifiers) triggers pause/resume
                     OverlayController.shared.handlePauseResume()
+                case 4:
+                    OverlayController.shared.handleCancelRecording()
                 default:
                     break
                 }
@@ -79,9 +80,27 @@ class HotkeyManager {
     }
     
     private var pauseHotKeyRef: EventHotKeyRef?
-    
-    // Called when the overlay enters recording or paused states
-    func registerPauseHotkey() {
+    private var cancelHotKeyRef: EventHotKeyRef?
+
+    func registerRecordingSessionHotkeys() {
+        registerPauseHotkey()
+        registerCancelHotkey()
+    }
+
+    func unregisterRecordingSessionHotkeys() {
+        unregisterPauseHotkey()
+        unregisterCancelHotkey()
+    }
+
+    func reloadRecordingSessionHotkeys() {
+        unregisterRecordingSessionHotkeys()
+        let state = OverlayController.shared.state
+        if state == .recording || state == .paused {
+            registerRecordingSessionHotkeys()
+        }
+    }
+
+    private func registerPauseHotkey() {
         guard pauseHotKeyRef == nil else { return }
         
         let keyCode = UInt32(SettingsManager.shared.pauseHotkeyKeyCode)
@@ -95,21 +114,35 @@ class HotkeyManager {
             print("Registered pause hotkey interception. Code: \(keyCode), Modifiers: \(modifiers)")
         }
     }
-    
-    // Called when the overlay exits recording or paused states
-    func unregisterPauseHotkey() {
+
+    private func unregisterPauseHotkey() {
         if let ref = pauseHotKeyRef {
             UnregisterEventHotKey(ref)
             pauseHotKeyRef = nil
             print("Unregistered pause hotkey interception.")
         }
     }
-    
-    func reloadPauseHotkey() {
-        unregisterPauseHotkey()
-        let state = OverlayController.shared.state
-        if state == .recording || state == .paused {
-            registerPauseHotkey()
+
+    private func registerCancelHotkey() {
+        guard cancelHotKeyRef == nil else { return }
+
+        let keyCode = UInt32(SettingsManager.shared.cancelHotkeyKeyCode)
+        let modifiers = UInt32(SettingsManager.shared.cancelHotkeyModifiers)
+        let cancelHotKeyID = EventHotKeyID(signature: OSType(32), id: UInt32(4))
+
+        let status = RegisterEventHotKey(keyCode, modifiers, cancelHotKeyID, GetApplicationEventTarget(), 0, &cancelHotKeyRef)
+        if status != noErr {
+            print("Failed to register cancel hotkey: OSStatus \(status)")
+        } else {
+            print("Registered cancel hotkey interception. Code: \(keyCode), Modifiers: \(modifiers)")
+        }
+    }
+
+    private func unregisterCancelHotkey() {
+        if let ref = cancelHotKeyRef {
+            UnregisterEventHotKey(ref)
+            cancelHotKeyRef = nil
+            print("Unregistered cancel hotkey interception.")
         }
     }
     
@@ -122,7 +155,7 @@ class HotkeyManager {
             UnregisterEventHotKey(ref)
             fileUploadHotKeyRef = nil
         }
-        unregisterPauseHotkey()
+        unregisterRecordingSessionHotkeys()
     }
     
     func reloadHotkey() {

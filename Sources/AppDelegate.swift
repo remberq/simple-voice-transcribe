@@ -66,10 +66,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         permissionFlowObservers = [permissionFlowStartObserver, permissionFlowFinishObserver]
         
         let menu = NSMenu()
-        menu.addItem(NSMenuItem(title: "Toggle Overlay (Debug)", action: #selector(toggleOverlay), keyEquivalent: "o"))
+        menu.addItem(NSMenuItem(title: "Показать overlay (отладка)", action: #selector(toggleOverlay), keyEquivalent: "o"))
         menu.addItem(NSMenuItem.separator())
         menu.addItem(NSMenuItem(title: "Приветствие", action: #selector(openWelcomeFromMenu), keyEquivalent: "w"))
-        menu.addItem(NSMenuItem(title: "Settings...", action: #selector(openSettings), keyEquivalent: ","))
+        menu.addItem(NSMenuItem(title: "Настройки...", action: #selector(openSettings), keyEquivalent: ","))
         menu.addItem(NSMenuItem(title: "История транскрибаций", action: #selector(openHistory), keyEquivalent: "h"))
         menu.addItem(NSMenuItem(title: "Загрузить файл", action: #selector(triggerFileUpload), keyEquivalent: "d"))
         menu.addItem(NSMenuItem.separator())
@@ -77,9 +77,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         menu.addItem(mockMenuItem)
         menu.addItem(NSMenuItem.separator())
         
-        menu.addItem(NSMenuItem(title: "Troubleshooting", action: #selector(openOpsDocs), keyEquivalent: "t"))
+        menu.addItem(NSMenuItem(title: "Устранение неполадок", action: #selector(openOpsDocs), keyEquivalent: "t"))
         menu.addItem(NSMenuItem.separator())
-        menu.addItem(NSMenuItem(title: "Quit", action: #selector(quitApp), keyEquivalent: "q"))
+        menu.addItem(NSMenuItem(title: "Выход", action: #selector(quitApp), keyEquivalent: "q"))
         
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         self.appMenu = menu
@@ -231,7 +231,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
             let hostingController = NSHostingController(rootView: view)
             
             let window = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 560, height: 470),
+                contentRect: NSRect(x: 0, y: 0, width: 560, height: 560),
                 styleMask: [.titled, .closable, .miniaturizable],
                 backing: .buffered,
                 defer: false
